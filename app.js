@@ -1,9 +1,11 @@
 /* ==========================================================================
-   Route Relay — Phase 2 static frontend shell
-   A local, in-memory mock store drives all three screens. No backend, no
-   network. Phase 3 replaces this store with a Firebase Realtime Database
-   subscription; Phase 4 adds real link classification/generation; Phase 5
-   adds the real deep-link handoff (window.location.href = url).
+   Route Relay — Phase 3 frontend (SQLite backend integration)
+   All three screens are driven by a shared, server-side store: a thin Node +
+   SQLite REST API on the droplet (see backend/server.js). The client polls
+   GET /api/trips/:code/routes every ~1.2s and mutates via POST/PATCH/DELETE.
+
+   Phase 4 adds real link classification/generation; Phase 5 adds the real
+   deep-link handoff (window.location.href = url).
 
    Design decisions locked for this phase (see docs/PRODUCT_SPEC.md §7):
    - Whole card is tappable on the driver view (1 tap) — the "▶ Navigate"
@@ -17,47 +19,73 @@
   'use strict';
 
   /* ------------------------------------------------------------------ *
-   * Mock store (in-memory). Phase 3 swaps this for a realtime store.
+   * Store + API layer. Routes now live in the SQLite backend; the local
+   * `store.routes` array is a live copy refreshed by polling.
    * ------------------------------------------------------------------ */
   const store = {
     tripCode: '',
     role: 'passenger', // 'driver' | 'passenger'
     nickname: '',
-    routes: [
-      {
-        id: 'r-active',
-        label: 'Lake view lookout',
-        url: 'https://maps.apple.com/directions?destination=Lake+view+lookout&mode=driving',
-        provider: 'apple',
-        kind: 'destination',
-        status: 'active',
-        author: 'Sam',
-        createdAt: Date.now() - 1000 * 60 * 12,
-      },
-      {
-        id: 'r-costco',
-        label: 'Gas — Costco',
-        url: 'https://www.google.com/maps/dir/?api=1&destination=Costco+Gas+Bar&travelmode=driving',
-        provider: 'google',
-        kind: 'waypoint',
-        status: 'pending',
-        author: 'Alex',
-        createdAt: Date.now() - 1000 * 60 * 6,
-      },
-      {
-        id: 'r-poutine',
-        label: 'Poutine spot',
-        url: 'https://www.google.com/maps/dir/?api=1&destination=La+Banquise+Montreal&travelmode=driving',
-        provider: 'google',
-        kind: 'destination',
-        status: 'pending',
-        author: 'Sam',
-        createdAt: Date.now() - 1000 * 60 * 2,
-      },
-    ],
+    routes: [],
     reorderMode: false,
-    nextId: 100,
   };
+
+  const API_BASE = (window.RR_CONFIG && window.RR_CONFIG.apiBase) || '';
+  const POLL_MS = 1200;
+  let pollingTimer = null;
+  let online = true;
+
+  function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({}, opts.headers, { 'Content-Type': 'application/json' });
+    return fetch(API_BASE + path, opts).then((res) => {
+      if (!res.ok) {
+        return res.text().then((t) => {
+          let msg = t;
+          try { msg = JSON.parse(t).error || t; } catch (e) { /* not json */ }
+          throw new Error(msg || 'HTTP ' + res.status);
+        });
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    });
+  }
+
+  function routesPath() {
+    return `/api/trips/${encodeURIComponent(store.tripCode)}/routes`;
+  }
+
+  function setConnection(state) {
+    if (state === online) return;
+    online = state;
+    if (!state) toast('Offline — reconnecting…', 4000);
+    else toast('Back online ✓');
+  }
+
+  async function fetchRoutes() {
+    if (!store.tripCode) return;
+    try {
+      const data = await api(routesPath());
+      store.routes = (data && data.routes) || [];
+      setConnection(true);
+      renderCurrent();
+    } catch (e) {
+      setConnection(false);
+    }
+  }
+
+  function startPolling() {
+    stopPolling();
+    fetchRoutes();
+    pollingTimer = setInterval(fetchRoutes, POLL_MS);
+  }
+
+  function stopPolling() {
+    if (pollingTimer) {
+      clearInterval(pollingTimer);
+      pollingTimer = null;
+    }
+  }
 
   /* ------------------------------------------------------------------ *
    * Small helpers
@@ -215,6 +243,13 @@
     }
 
     window.scrollTo(0, 0);
+  }
+
+  // Re-render the current view (used after async fetches without toggling wake lock).
+  function renderCurrent() {
+    if (currentView === 'driver') renderDriver();
+    else if (currentView === 'passenger') renderPassenger();
+    else renderLanding();
   }
 
   /* ------------------------------------------------------------------ *
@@ -378,6 +413,7 @@
       location.hash = `#/trip/${code}`;
     }
 
+    startPolling();
     showView(store.role === 'driver' ? 'driver' : 'passenger');
   }
 
@@ -436,7 +472,7 @@
     return 'text';
   }
 
-  function submitRoute() {
+  async function submitRoute() {
     const input = $('#dest-input').value.trim();
     const label = $('#label-input').value.trim();
     const kind = ($('input[name="kind"]:checked') || {}).value || 'destination';
@@ -451,61 +487,75 @@
     err.hidden = true;
 
     const provider = guessProvider(input);
-    const route = {
-      id: 'r' + store.nextId++,
+    const payload = {
       label: label || input.slice(0, 48),
-      // Phase 4 fills in a canonical deep link; store a placeholder for now.
+      // Phase 4 fills in a canonical deep link; store the pasted link for now.
       url: provider === 'text' ? '' : input,
       provider,
       kind,
-      status: 'pending',
       author: store.nickname || 'You',
-      createdAt: Date.now(),
     };
 
-    store.routes.unshift(route);
-    renderPassenger();
-    $('#dest-input').value = '';
-    $('#label-input').value = '';
-    toggleAddPanel(false);
-    toast('Added to trip ✓');
+    const btn = $('#btn-submit');
+    btn.disabled = true;
+    try {
+      const created = await api(routesPath(), {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      store.routes.unshift(created);
+      renderCurrent();
+      $('#dest-input').value = '';
+      $('#label-input').value = '';
+      toggleAddPanel(false);
+      toast('Added to trip ✓');
+    } catch (e) {
+      err.textContent = 'Couldn’t add — ' + (e.message || 'check connection');
+      err.hidden = false;
+    } finally {
+      btn.disabled = false;
+    }
   }
 
   // Stub for the one-tap handoff. Phase 5 replaces this with a real deep-link
   // open: window.location.href = normalizedUrl(route).
-  function navigate(id) {
+  async function navigate(id) {
     const route = store.routes.find((r) => r.id === id);
     if (!route) return;
 
-    // Mark any previous active route back to pending.
-    store.routes.forEach((r) => {
-      if (r.status === 'active') r.status = 'pending';
-    });
-    route.status = 'active';
-
-    if (currentView === 'driver') renderDriver();
-    else renderPassenger();
+    try {
+      await api(routesPath() + '/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
+    } catch (e) {
+      toast('Couldn’t activate — ' + (e.message || 'offline'));
+      return;
+    }
+    await fetchRoutes();
 
     if (route.url) {
       toast(`▶ Opening ${providerLabel(route.provider)} — ${route.label || 'stop'}`);
       // Real implementation (Phase 5):
       // window.location.href = route.url;
-      console.info('[mock] would navigate to:', route.url);
+      console.info('[relay] would navigate to:', route.url);
     } else {
       toast(`▶ Navigate to “${route.label || 'stop'}” (link set in Phase 4)`);
     }
   }
 
-  function markDone(id) {
-    const route = store.routes.find((r) => r.id === id);
-    if (!route) return;
-    route.status = 'done';
-    if (currentView === 'driver') renderDriver();
-    else renderPassenger();
+  async function markDone(id) {
+    try {
+      await api(routesPath() + '/' + encodeURIComponent(id), {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'done' }),
+      });
+    } catch (e) {
+      toast('Couldn’t update — ' + (e.message || 'offline'));
+      return;
+    }
+    await fetchRoutes();
     toast('Marked done');
   }
 
-  function clearQueue() {
+  async function clearQueue() {
     const pending = store.routes.filter((r) => r.status === 'pending');
     if (pending.length === 0) {
       toast('Queue is already clear');
@@ -514,29 +564,45 @@
     if (!confirm(`Clear ${pending.length} queued route${pending.length === 1 ? '' : 's'}?`)) {
       return;
     }
-    store.routes = store.routes.filter((r) => r.status !== 'pending');
+    try {
+      await Promise.all(
+        pending.map((r) => api(routesPath() + '/' + encodeURIComponent(r.id), { method: 'DELETE' }))
+      );
+    } catch (e) {
+      toast('Couldn’t clear — ' + (e.message || 'offline'));
+      return;
+    }
     store.reorderMode = false;
     $('#btn-reorder').setAttribute('aria-pressed', 'false');
-    renderDriver();
+    await fetchRoutes();
     toast('Queue cleared');
   }
 
-  function moveRoute(id, dir) {
-    const pending = store.routes.filter((r) => r.status === 'pending');
-    const from = pending.findIndex((r) => r.id === id);
-    const to = from + dir;
-    if (from < 0 || to < 0 || to >= pending.length) return;
+  async function moveRoute(id, dir) {
+    const ordered = store.routes.slice().sort((a, b) => b.sortOrder - a.sortOrder);
+    const pendingIdx = ordered
+      .map((r, i) => (r.status === 'pending' ? i : -1))
+      .filter((i) => i >= 0);
+    const from = ordered.findIndex((r) => r.id === id);
+    const pFrom = pendingIdx.indexOf(from);
+    const pTo = pFrom + dir;
+    if (pFrom < 0 || pTo < 0 || pTo >= pendingIdx.length) return;
+    const to = pendingIdx[pTo];
 
-    // Rebuild the store's full routes array with the two pending items swapped.
-    const swapped = pending.slice();
-    const tmp = swapped[from];
-    swapped[from] = swapped[to];
-    swapped[to] = tmp;
+    const tmp = ordered[from];
+    ordered[from] = ordered[to];
+    ordered[to] = tmp;
 
-    const pendingIds = new Set(swapped.map((r) => r.id));
-    let i = 0;
-    store.routes = store.routes.map((r) => (pendingIds.has(r.id) ? swapped[i++] : r));
-    renderDriverQueue();
+    try {
+      await api(routesPath() + '/reorder', {
+        method: 'POST',
+        body: JSON.stringify({ orderedIds: ordered.map((r) => r.id) }),
+      });
+    } catch (e) {
+      toast('Couldn’t reorder — ' + (e.message || 'offline'));
+      return;
+    }
+    await fetchRoutes();
   }
 
   function toggleReorder() {

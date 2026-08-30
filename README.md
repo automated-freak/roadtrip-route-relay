@@ -2,10 +2,10 @@
 
 Shared turn-by-turn route handoff for road trips.
 
-**Status: Phase 2 complete — static frontend shell.** The three screens
-(landing / passenger / driver) are built as a mobile-first static site driven by an
-in-memory mock store. Realtime backend (Firebase), link parsing, and one-tap navigation
-arrive in later phases.
+**Status: Phase 3 complete — shared realtime backend.** The three screens
+(landing / passenger / driver) are built as a mobile-first static site, now backed by a
+self-hosted SQLite API (a tiny Node server, zero npm deps) so routes sync across phones.
+Link parsing (Phase 4) and one-tap navigation (Phase 5) arrive next.
 
 ---
 
@@ -45,8 +45,9 @@ Collaboration features for a small group (≈3 people in the same car, all on iP
 - **Mobile-first** — works in Safari on iPhone (iOS).
 - **Minimal security** — it's a temporary, invite-only tool for a handful of people on
   the same trip. No accounts. Access is gated by a shared, unguessable trip code / URL.
-- **Zero server maintenance** — static frontend on GitHub Pages plus a free realtime
-  backend (Firebase Realtime Database) for the shared list.
+- **Throwaway-friendly** — static frontend on GitHub Pages plus a tiny self-hosted
+  SQLite API (Node, zero dependencies) for the shared list. Built for a small group on a
+  single trip; not meant to be maintained long-term.
 - **Instant sync** — when a passenger adds a route, it appears on the driver's screen
   immediately.
 
@@ -57,16 +58,21 @@ roadtrip-route-relay/
 ├── README.md                 ← you are here
 ├── index.html                ← static app shell (all 3 screens)
 ├── styles.css                ← mobile-first, dark-mode + safe-area styles
-├── app.js                    ← in-memory mock store + view logic
+├── app.js                    ← view logic + API client (polls the backend)
+├── config.js                 ← runtime config (API base URL — set before deploy)
 ├── manifest.webmanifest      ← PWA manifest
 ├── sw.js                     ← service worker (offline shell)
 ├── icons/                    ← app icons (192/512/maskable/apple-touch)
 ├── scripts/gen-icons.py      ← regenerates the icons
+├── backend/
+│   ├── server.js             ← SQLite REST API (Node, zero npm deps)
+│   └── README.md             ← how to run + expose it
 └── docs/
     ├── PLAN.md               ← phased execution plan (start here to build)
     ├── ARCHITECTURE.md       ← technical decisions and data model
     ├── RESEARCH.md           ← findings and sources that informed the plan
-    └── SECURITY.md           ← the "minimal security" model and its tradeoffs
+    ├── SECURITY.md           ← the "minimal security" model and its tradeoffs
+    └── SETUP.md              ← run/deploy the backend + set the API base URL
 ```
 
 ## Where to start
@@ -80,13 +86,13 @@ roadtrip-route-relay/
 
 | Question | Answer |
 |----------|--------|
-| Hosting | GitHub Pages (free, HTTPS) |
+| Hosting | Frontend: GitHub Pages (free, HTTPS). Backend: SQLite API on a droplet |
 | Frontend | Static, mobile-first (vanilla HTML/CSS/JS; PWA manifest + icons + service worker) |
-| Shared state | Firebase Realtime Database (free Spark tier) |
+| Shared state | Self-hosted SQLite + thin Node API (zero npm deps) |
 | Auth | None. Shared trip code / URL (see `docs/SECURITY.md`) |
 | Map providers | Google Maps + Apple Maps deep links (both handled on iOS) |
 | Collaboration | Multistop itinerary, one-tap navigation |
-| Status | Phase 2 static shell complete (no backend yet) |
+| Status | Phase 3 complete — shared SQLite backend wired up |
 
 ## Live site
 

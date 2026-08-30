@@ -209,7 +209,7 @@ The spec is consistent with the architecture. Point-by-point:
 |------------------|----------------------|-----------|
 | Two self-selected roles, no accounts | "Roles are per-device and self-selected" | ✅ matches |
 | 3 screens, static, mobile-first | Plain HTML/CSS/JS on GitHub Pages, no framework | ✅ |
-| Realtime shared queue | Firebase Realtime Database trip rooms | ✅ |
+| Realtime shared queue | SQLite + thin Node API trip rooms | ✅ |
 | Both map providers, no conversion | "Handled as data, not SDKs"; both apps on iOS | ✅ |
 | One-tap navigation | Deep-link handoff: normalize `dir_action=navigate` / `start=N`, then open | ✅ |
 | Active-route highlight | `status: active` field already in data model | ✅ |
@@ -220,7 +220,7 @@ The spec is consistent with the architecture. Point-by-point:
 | Validation (reject non-map links) | SECURITY.md "Input validation" requirement | ✅ |
 
 **Verdict:** No architecture changes are required to satisfy this spec. The data model
-(`meta`, `members`, `routes` with `kind`/`provider`/`status`) already covers every field the
+(`routes` with `kind`/`provider`/`status`) already covers every field the
 screens display. The only behaviors deferred to their build phases are: link
 classification/generation (Phase 4), one-tap normalization (Phase 5), multistop
 (Phase 6), and the security tightening (Phase 7) — exactly as planned.

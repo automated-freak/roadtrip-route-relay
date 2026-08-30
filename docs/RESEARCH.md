@@ -14,34 +14,30 @@ Findings that informed the plan, with sources. Current as of 2026-08-30.
 - Pages is static-only: **no server-side code or secrets** can run. This forces the
   shared-state problem onto a BaaS (see §2).
 
-## 2. Realtime shared state (Firebase vs Supabase)
+## 2. Realtime shared state (decision: self-hosted SQLite)
 
 Sources: Firebase pricing/docs (verified Aug 2026), Bytebase "Supabase vs Firebase"
 (updated 2025), AgentDeals 2026 comparison.
 
-- **Firebase Realtime Database** = purpose-built realtime + offline + mobile-first. Its
-  database is a JSON tree with real-time listeners — ideal for "everyone sees the same
-  list, instantly."
-- **Supabase** = open-source Postgres with a Realtime channel; better for SQL/relational
-  needs, open-source control, and predictable pricing.
-- **Decision:** Firebase Realtime Database for v1 (matches the core realtime requirement,
-  free tier, zero-ops). Supabase documented as the fallback if open-source/Postgres is
-  preferred later.
+The plan originally chose **Firebase Realtime Database**; in Phase 3 we **pivoted to a
+self-hosted SQLite API on the droplet** (`backend/server.js`, Node `node:http` +
+`node:sqlite`, zero npm deps). Why:
 
-**Exact free ("Spark") tier limits** (for 3 people in a car, all of them irrelevant):
+- **No Google account required.** Firebase needs the owner's login to create a project —
+  the one blocker we couldn't get around. SQLite is fully self-contained.
+- **Zero-ops is unnecessary here.** Three phones polling every ~1.2s is trivial load; we
+  don't need a managed realtime service for a one-week trip.
+- **Realtime ≈ polling.** SQLite can't push, so the client polls `GET …/routes` every
+  ~1.2s. That meets the "appears within ~1s" acceptance bar with far less code than
+  WebSockets/SSE.
 
-| Limit | Value | Headroom for us |
-|-------|-------|-----------------|
-| Simultaneous connections | 100 | 3 phones = 3 connections |
-| Stored data | 1 GB | map links ≈ bytes per trip |
-| Download | 10 GB/month | negligible |
-
-Caveats worth knowing:
-- Firebase **removed Cloud Storage from the Spark plan in Feb 2026** (Blaze + credit card
-  now required for file storage). **Not relevant** — we don't store files, only JSON.
-- There was a broader "Spark → Blaze migration" push in early 2026 around Firebase Studio
-  and Cloud Storage. Realtime Database on Spark remains the right, free choice here; just
-  avoid any Firebase feature that needs Storage or paid quotas.
+Historical comparison (kept for reference if the owner later wants a managed backend):
+- **Firebase Realtime Database** — purpose-built realtime + offline, a JSON tree with live
+  listeners. Its free "Spark" tier (100 connections, 1 GB storage, 10 GB/month download)
+  was always ample for 3 phones. Caveat: Firebase removed Cloud Storage from Spark in Feb
+  2026 (irrelevant — we only store JSON).
+- **Supabase** — open-source Postgres + Realtime channel; the documented fallback if
+  open-source/Postgres is preferred later.
 
 ## 3. Google Maps deep links
 

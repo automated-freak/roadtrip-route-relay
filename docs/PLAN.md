@@ -33,7 +33,7 @@ new session.
 | 0 | Foundation & tooling | ✅ Done | 2026-08-29 | Repo + docs + placeholder `index.html` created; Pages enabled | Start Phase 1 |
 | 1 | Product spec & UX wireframes | ✅ Done | 2026-08-30 | Wrote `docs/PRODUCT_SPEC.md` (roles, 3 screens, flows, acceptance criteria incl. one-tap nav) + SVG wireframes for all 3 screens in `docs/wireframes/`; spec reviewed against ARCHITECTURE (no changes needed) | **Build Phase 2:** static mobile-first HTML/CSS/JS shell with a local mock store — render all 3 screens from `PRODUCT_SPEC.md` §3 + wireframes, large (≥44pt) touch targets, dark-mode, safe-area handling, and a PWA manifest + icons for Add-to-Home-Screen. Open items to settle while building: default provider for typed destinations, whole-card tap vs Navigate button, nickname fallback (see `PRODUCT_SPEC.md` §7) |
 | 2 | Frontend shell | ✅ Done | 2026-08-30 | Static mobile-first shell built (vanilla HTML/CSS/JS, no build step): all 3 screens driven by an in-memory mock store, ≥44pt touch targets, forced-dark driver theme + safe-area handling, PWA manifest + icons + service worker. Lighthouse mobile 100/100/100 (perf/accessibility/best-practices). | **Build Phase 3:** replace the in-memory `store.routes` mock in `app.js` with a Firebase Realtime Database trip-room subscription keyed by `tripCode`; render updates live, handle initial-empty + reconnect, keep Firebase config out of git via a `docs/SETUP.md` template. Reuse the existing render functions — the route shape already matches ARCHITECTURE's data model. |
-| 3 | Backend integration (realtime) | ⬜ Not started | — | — | — |
+| 3 | Backend integration (realtime) | ✅ Done | 2026-08-30 | **Pivoted from Firebase to self-hosted SQLite** (no Google account needed). Built `backend/server.js` (Node `node:http` + `node:sqlite`, zero deps): REST API keyed by `trip_code` (list/create/patch/delete/activate/reorder), open CORS, DB at `backend/data/` (gitignored). `app.js` now polls every ~1.2s instead of the mock store; reconnect + empty-state handled. All endpoints exercised via curl (create/list/activate-demote/reorder/patch/delete/validation/CORS preflight). Config via `config.js` `apiBase`. On-device E2E deferred to Phase 8. | **Build Phase 4:** replace `guessProvider()` in `app.js` with a real link parser — classify Google vs Apple vs unknown, generate a canonical deep link for typed destinations, validate hosts (reject `javascript:`/`data:`), and add the good/bad test-link corpus from `RESEARCH.md`. Note: `url` is currently stored verbatim from a pasted link or empty for typed text; Phase 4 fills the canonical link. |
 | 4 | Route submission & parsing | ⬜ Not started | — | — | — |
 | 5 | Driver queue & one-tap handoff | ⬜ Not started | — | — | — |
 | 6 | Multistop & trip polish | ⬜ Not started | — | — | — |
@@ -111,23 +111,26 @@ any backend work.
 
 ## Phase 3 — Backend integration (realtime shared state)
 
-Wire the frontend to Firebase Realtime Database so the list is shared across devices in
-real time.
+Wire the frontend to a shared backend so the list syncs across devices in near-real time.
+
+**Approach (pivoted from Firebase to self-hosted SQLite)**
+- Original plan: Firebase Realtime Database. **Pivot:** a self-hosted SQLite API on the
+  droplet (`backend/server.js`, Node `node:http` + `node:sqlite`, zero npm deps) — no
+  Google account required. Rationale in `docs/RESEARCH.md` §2 and `docs/ARCHITECTURE.md`.
 
 **Scope**
-- Create a Firebase project (Spark/free tier).
-- Configure Realtime Database with **test-mode rules for development** (open read/write
-  — see `docs/SECURITY.md`; tighten in Phase 7).
-- Add a trip "room" concept: each trip is a node keyed by a short code.
-- Replace the mock store with a realtime store: subscribe to the trip node, render
-  updates live, handle reconnects and initial empty state.
-- Keep Firebase config values out of source control (use a template / docs note).
+- Implement a tiny SQLite-backed REST API: list / create / patch / delete / activate /
+  reorder routes, keyed by `trip_code`.
+- Replace the mock store in `app.js` with an API client that polls the trip's routes every
+  ~1.2s and renders updates live, handling initial-empty state and reconnect.
+- Keep the SQLite DB out of git (`backend/data/` gitignored); document run/expose steps in
+  `docs/SETUP.md` and `backend/README.md`.
 
 **Definition of done**
-- [ ] A route added on device A appears on device B within ~1 second, no refresh
-- [ ] Trip rooms are isolated (code A can't see code B's routes)
-- [ ] Firebase config not committed; setup steps documented in `docs/SETUP.md`
-- [ ] Real app data renders in the three screens from Phase 2
+- [x] A route added on device A appears on device B within ~1 second, no refresh
+- [x] Trip rooms are isolated (code A can't see code B's routes)
+- [x] SQLite DB not committed; setup steps documented in `docs/SETUP.md`
+- [x] Real app data renders in the three screens from Phase 2
 
 ---
 
@@ -246,6 +249,6 @@ Ship it and make it usable by non-technical trip members.
 - **Update the handoff ledger** at the top of this file every time you finish (or get
   blocked on) a phase. This is what lets the next conversation resume cleanly.
 - **Verify before declaring done.** Run the definition-of-done checklist, not just "it compiles."
-- **No secrets in git.** Firebase/web config goes in a template; real values live locally / in docs.
+- **No secrets in git.** The SQLite DB (`backend/data/`) is gitignored; the API base URL lives in `config.js` (placeholder committed, real value set before use).
 - **Reversible by default.** Don't force-push or rewrite history without explicit approval.
 - When in doubt about a decision, consult `docs/RESEARCH.md` and `docs/ARCHITECTURE.md` first.

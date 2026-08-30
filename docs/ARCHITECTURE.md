@@ -18,10 +18,10 @@ Passenger phones                Driver phone                Car display
 │  - passenger view: type/paste, queue              │
 │  - driver view: live queue, one-tap launch        │
 └───────────────┬───────────────────────────────────┘
-                │ realtime subscribe/write
+                │ poll + write (HTTPS)
                 ▼
-   Firebase Realtime Database ("trip rooms")
-   - free tier, realtime push, no server to run
+   Route Relay API + SQLite  (self-hosted on a droplet)
+   - tiny Node server, ~1.2s polling, zero npm deps
 ```
 
 Key insight: **Route Relay never draws its own map.** It is a control surface. It stores
@@ -36,7 +36,7 @@ which is already mirrored to the car. This keeps the app tiny and free.
 |-------|--------|-----|
 | Hosting | GitHub Pages | Free, HTTPS, zero-ops, works with a static site |
 | Frontend | Plain HTML/CSS/JS (v1) | No build step, easy to audit, fast on mobile. Optional PWA manifest for "Add to Home Screen." A framework (e.g. Preact/Svelte) can be added later only if complexity demands it. |
-| Shared state | Firebase Realtime Database | Purpose-built for realtime push + offline support; free Spark tier; no backend to deploy. See "Backend options" below. |
+| Shared state | SQLite + thin Node API (self-hosted) | A tiny REST server (`node:http` + `node:sqlite`, zero npm deps) on a droplet; the client polls every ~1.2s. Chosen for a 3-person, one-week trip: no Google account, no external service, full control. See "Backend choice" below. |
 | Auth | None (shared trip code) | Minimal-security requirement — see `SECURITY.md` |
 | Maps | Google + Apple deep links | Handled as data, not SDKs. No API key required. |
 
@@ -60,55 +60,56 @@ Rules:
 
 ---
 
-## Data model (Realtime Database)
+## Data model (SQLite)
 
-```
-/trips
-  /<tripCode>            # short, unguessable code (e.g. "X7K2Q")
-    meta:
-      createdAt: <ISO>
-      expiresAt: <ISO>   # room auto-expiry
-    members:
-      /<memberId>        # e.g. "sam-8f3a"
-        name: "Sam"
-        role: "driver" | "passenger"
-        lastSeen: <ISO>
-    routes:
-      /<routeId>
-        label: "Scenic detour to the lake"     # optional, free text
-        url: "https://maps.app.goo.gl/..."     # canonical link, stored as-is
-        provider: "google" | "apple" | "other"
-        kind: "destination" | "waypoint"       # new destination vs stop along the way
-        status: "pending" | "active" | "done" | "removed"
-        author: "Sam"                          # nickname of the submitter
-        createdAt: <ISO>
-        updatedAt: <ISO>
-```
+One table, `routes`. There is no `trips` or `members` table — trip isolation is just a
+`trip_code` column, and nicknames are stored inline on each route. This matches the
+throwaway scale (no presence tracking, no accounts).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | TEXT (PK) | server-generated UUID |
+| `trip_code` | TEXT | short, unguessable code (e.g. `X7K2Q`); indexed |
+| `label` | TEXT | optional free text |
+| `url` | TEXT | canonical link, stored as-is |
+| `provider` | TEXT | `google` \| `apple` \| `text` \| `other` |
+| `kind` | TEXT | `destination` \| `waypoint` |
+| `status` | TEXT | `pending` \| `active` \| `done` \| `removed` |
+| `author` | TEXT | nickname of the submitter |
+| `sort_order` | INTEGER | higher = newer = top of list |
+| `created_at` / `updated_at` | INTEGER | epoch ms |
 
 Notes:
-- `tripCode` is generated client-side from a cryptographically random source and embedded
-  in the share URL, e.g. `…/#/trip/X7K2Q`. The hash keeps the code out of server logs.
-- `kind` separates "this is our new destination" (`destination`) from "this is a stop
-  along the way" (`waypoint`). It's how we later build a multi-stop itinerary.
-- Realtime listeners mean any client update is pushed to all connected clients instantly.
+- `trip_code` is generated client-side from a CSPRNG and embedded in the share URL as a
+  hash fragment, e.g. `…/#/trip/X7K2Q` — the hash keeps the code out of server logs.
+- `kind` separates "our new destination" from "a stop along the way"; it enables the
+  multistop itinerary later.
+- `sort_order` gives a stable, reorderable list (the reorder endpoint rewrites it).
+- The client polls `GET /api/trips/:code/routes` every ~1.2s; any update appears on other
+  devices within ~1 second.
 
 ---
 
-## Backend options (evaluated)
+## Backend choice: self-hosted SQLite + thin API
 
-| Option | Pros | Cons | Verdict |
-|--------|------|------|---------|
-| **Firebase Realtime Database** | Real-time push, offline, free tier, mobile-first, zero-ops | Google-managed; proprietary | ✅ **Recommended** |
-| Firebase Firestore | Richer queries | Slightly heavier; realtime is a bolt-on vs RTDB's core | Alternative |
-| Supabase | Open source, Postgres, SQL, Realtime channel | Free tier rate-limits; more setup for pure realtime | Good alternative if open-source/Postgres preferred |
-| Self-hosted server | Full control | Violates "zero maintenance"; needs a host + TLS | ❌ Not for v1 |
-| LocalStorage only | Trivial | Not shared across devices — defeats the purpose | ❌ |
+The original plan used **Firebase Realtime Database**, but we pivoted to a **self-hosted
+SQLite API on the droplet** (Phase 3). Rationale:
 
-**Why Firebase Realtime Database:** the entire product is "everyone sees the same list,
-updates appear immediately." RTDB was built for exactly that and is free at this scale
-(no auth, a handful of users, temporary rooms — 3 connections vs a 100-connection Spark
-limit). A future migration path to Supabase is documented if the owner later wants
-open-source/Postgres.
+- **No external account needed.** Firebase requires the owner's Google login to create a
+  project — a real blocker for a one-week, three-person trip. A SQLite file + a tiny Node
+  server is entirely self-contained.
+- **Zero dependencies.** Node's built-in `node:http` + `node:sqlite` mean no `npm install`,
+  no SDK, no vendor lock-in.
+- **Right-sized for the scale.** Three phones polling every ~1.2s is trivial load; SQLite
+  handles it without any of Firebase's setup (rules, project config, billing tier).
+- **Realtime via polling, not push.** SQLite has no push mechanism, so the client polls.
+  At ~1.2s the "appears within ~1s" requirement is met in practice, with far less code than
+  WebSockets/SSE.
+
+Tradeoffs (accepted): the droplet must be reachable over HTTPS (mobile mixed-content), and
+there is now a small server to keep running for the trip. For a throwaway that's fine; see
+`docs/SETUP.md`. If the owner later wants a managed, always-on backend, Supabase (or
+Firebase) is the documented migration path — the route schema maps cleanly.
 
 ---
 
@@ -137,9 +138,10 @@ No custom URL schemes or API keys are required. Full reference details are in
 ## Security posture (summary)
 
 - No user accounts, no passwords.
-- Access = knowing the trip code (unguessable) + optional short PIN.
-- Rooms auto-expire.
-- Input is validated to map domains only; labels render as text (XSS-safe).
+- Access = knowing the trip code (unguessable); the API is unauthenticated (open CORS),
+  so the trip code is the only gate.
+- Input is validated on render (labels render as text, XSS-safe); link validation is Phase 4.
+- Rooms are not auto-expired yet (deferred to Phase 7); fine for a one-week trip.
 - See `SECURITY.md` for the full model and its explicit tradeoffs.
 
 ---
@@ -147,8 +149,8 @@ No custom URL schemes or API keys are required. Full reference details are in
 ## Project conventions (for future sessions)
 
 - `main` is the default branch; feature work uses `openclaw/<topic>` branches.
-- No secrets in git. Firebase config goes in a committed `docs/SETUP.md` template with
-  placeholder values; the real config is injected at build/run time (or documented locally).
+- No secrets in git. The SQLite DB file lives under `backend/data/` (gitignored). The API
+  base URL goes in `config.js` (committed with a placeholder; set the real value before use).
 - Small, reviewable commits at each phase boundary.
 - Prefer plain HTML/CSS/JS for v1; add a framework or build tool only if a phase's
   requirements clearly justify it.

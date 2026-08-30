@@ -22,7 +22,7 @@ Who are we protecting against, and what do we care about?
 | Trip data leaking publicly | Medium | No PII stored; only map links + labels + nicknames |
 | Account takeover / identity theft | N/A | There are no accounts |
 | Malicious link injection | Low | Accept only map links; sanitize on render |
-| Data persistence / compliance | Low | Trips are temporary and auto-expire |
+| Data persistence / compliance | Low | Trips are temporary; auto-expiry is deferred (Phase 7) |
 
 We explicitly do **not** build: user accounts, passwords, OAuth, email verification,
 audit logs, or per-user permissions.
@@ -47,16 +47,18 @@ you hand someone the link in the car.
 
 ## Implementation requirements (for the build phases)
 
-- **Firebase rules:** in development use test-mode (open) rules; before any real use,
-  switch to rules that scope read/write to the specific trip node only (deny list access
-  to `/trips` root). Even with open rules, the unguessable code is the real gate.
+- **Open API, no auth:** the SQLite API is deliberately unauthenticated with open CORS
+  (`Access-Control-Allow-Origin: *`). Anyone who can reach it can read/write *if they know
+  the trip code*; the unguessable code is the real gate. There is no endpoint that lists
+  trip codes, so enumeration is impractical.
 - **Input validation:** only store `https` links whose host is a known maps domain
   (google.com/maps, maps.app.goo.gl, goo.gl/maps, maps.apple.com). Reject `javascript:`,
-  `data:`, and other schemes outright.
+  `data:`, and other schemes outright. (Implemented in Phase 4.)
 - **Render safety:** treat labels/nicknames as text (never as HTML) to prevent XSS.
-- **No secrets in the repo:** Firebase config is public by design (it only identifies the
-  project); anything genuinely sensitive (if added later) stays out of git.
-- **Expiry:** rooms carry an `expiresAt`; a client that observes an expired room clears it.
+- **No secrets in the repo:** the SQLite DB (`backend/data/`) is gitignored; the API base
+  URL in `config.js` is public by design (it only points at the droplet).
+- **Expiry:** room cleanup is deferred to Phase 7. For a one-week trip, stale rows are
+  harmless (the DB is small and gets deleted after the trip).
 
 ---
 
@@ -66,8 +68,8 @@ you hand someone the link in the car.
   it's a temporary road-trip tool, not a banking app.
 - **No identity.** "Author" is a self-chosen nickname; there's no way to prove who added a
   route. Accepted — the car can sort that out verbally.
-- **Data lives on Firebase.** Map links and labels are not sensitive, but they do live in
-  Google's infra. Accepted for a free, zero-ops backend.
+- **Data lives in SQLite on the droplet.** Map links and labels are not sensitive, but they
+  do sit in a local file on a single machine. Accepted for a one-week, self-hosted trip.
 
 If the owner later wants stronger guarantees, the migration path is: move to Supabase with
 row-level security, add a real login, or self-host. Those are documented as future options,
