@@ -149,5 +149,89 @@ t('non-https is left unchanged (no mangling)', () => {
   assert.strictEqual(RouteLink.normalizeForNavigation('javascript:alert(1)'), 'javascript:alert(1)');
 });
 
+console.log('Multistop itinerary (Phase 6):');
+t('placeToken extracts Google destination', () => {
+  assert.strictEqual(
+    RouteLink.placeToken('https://www.google.com/maps/dir/?api=1&destination=Montreal&travelmode=driving'),
+    'Montreal'
+  );
+});
+t('placeToken extracts Google destination with waypoints', () => {
+  assert.strictEqual(
+    RouteLink.placeToken('https://www.google.com/maps/dir/?api=1&destination=Montreal&waypoints=Kingston|Ottawa'),
+    'Montreal'
+  );
+});
+t('placeToken extracts Google search query', () => {
+  assert.strictEqual(
+    RouteLink.placeToken('https://www.google.com/maps/search/?api=1&query=best+poutine+near+me'),
+    'best poutine near me'
+  );
+});
+t('placeToken extracts Apple legacy daddr', () => {
+  assert.strictEqual(
+    RouteLink.placeToken('https://maps.apple.com/?daddr=Niagara+Falls,+ON'),
+    'Niagara Falls, ON'
+  );
+});
+t('placeToken extracts Apple unified destination', () => {
+  assert.strictEqual(
+    RouteLink.placeToken('https://maps.apple.com/directions?destination=Montreal&mode=driving'),
+    'Montreal'
+  );
+});
+t('placeToken is empty for short links', () => {
+  assert.strictEqual(RouteLink.placeToken('https://maps.app.goo.gl/AbCdEfGh123'), '');
+});
+t('placeToken is empty for non-maps/unknown/non-https', () => {
+  assert.strictEqual(RouteLink.placeToken('https://example.com/x'), '');
+  assert.strictEqual(RouteLink.placeToken('javascript:alert(1)'), '');
+});
+
+t('buildItinerary google multi-stop', () => {
+  assert.strictEqual(
+    RouteLink.buildItinerary('google', ['Toronto', 'Kingston', 'Ottawa']),
+    'https://www.google.com/maps/dir/?api=1&destination=Ottawa&waypoints=Toronto|Kingston&travelmode=driving'
+  );
+});
+t('buildItinerary google single-stop (no waypoints)', () => {
+  assert.strictEqual(
+    RouteLink.buildItinerary('google', ['Montreal']),
+    'https://www.google.com/maps/dir/?api=1&destination=Montreal&travelmode=driving'
+  );
+});
+t('buildItinerary apple multi-stop (repeated waypoint)', () => {
+  assert.strictEqual(
+    RouteLink.buildItinerary('apple', ['Toronto', 'Kingston', 'Ottawa']),
+    'https://maps.apple.com/directions?destination=Ottawa&waypoint=Toronto&waypoint=Kingston&mode=driving'
+  );
+});
+t('buildItinerary apple single-stop', () => {
+  assert.strictEqual(
+    RouteLink.buildItinerary('apple', ['Montreal']),
+    'https://maps.apple.com/directions?destination=Montreal&mode=driving'
+  );
+});
+t('buildItinerary empty/invalid returns empty', () => {
+  assert.strictEqual(RouteLink.buildItinerary('apple', []), '');
+  assert.strictEqual(RouteLink.buildItinerary('google', null), '');
+  assert.strictEqual(RouteLink.buildItinerary('unknown', ['A', 'B']), '');
+});
+
+t('normalizeForNavigation applies to built apple itinerary (+start)', () => {
+  const built = RouteLink.buildItinerary('apple', ['Toronto', 'Kingston', 'Ottawa']);
+  assert.strictEqual(
+    RouteLink.normalizeForNavigation(built),
+    'https://maps.apple.com/directions?destination=Ottawa&waypoint=Toronto&waypoint=Kingston&mode=driving&start=3'
+  );
+});
+t('normalizeForNavigation applies to built google itinerary (+dir_action)', () => {
+  const built = RouteLink.buildItinerary('google', ['Toronto', 'Kingston', 'Ottawa']);
+  assert.strictEqual(
+    RouteLink.normalizeForNavigation(built),
+    'https://www.google.com/maps/dir/?api=1&destination=Ottawa&waypoints=Toronto|Kingston&travelmode=driving&dir_action=navigate'
+  );
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

@@ -252,6 +252,82 @@
     return s;
   }
 
+  /* ------------------------------------------------------------------ *
+   * Multistop itinerary (Phase 6)
+   * ------------------------------------------------------------------ */
+
+  // Extract the "place" string (a destination/query value) from a maps URL so it
+  // can be re-used as a destination/waypoint token when building a combined
+  // itinerary. Returns '' when the URL carries no usable place (short links,
+  // unknown hosts, non-https, unparseable) — those resolve only on the device.
+  function placeToken(urlString) {
+    var s = String(urlString == null ? '' : urlString).trim();
+    if (!s) return '';
+    var u;
+    try {
+      u = new URL(s);
+    } catch (e) {
+      return '';
+    }
+    if (u.protocol !== 'https:') return '';
+    var provider = hostProvider(u.hostname);
+    if (!provider) return '';
+    if (isShortLink(u.hostname)) return ''; // no place token on short links
+
+    var want = [];
+    if (provider === 'google') {
+      if (u.pathname.indexOf('/maps/dir/') === 0) want = ['destination'];
+      else if (u.pathname.indexOf('/maps/search/') === 0) want = ['query'];
+      else want = ['destination', 'query', 'q'];
+    } else { // apple
+      if (u.pathname.indexOf('/directions') === 0) want = ['destination', 'daddr'];
+      else want = ['daddr', 'destination'];
+    }
+
+    var raw = '';
+    for (var i = 0; i < want.length; i++) {
+      var v = u.searchParams.get(want[i]);
+      if (v) { raw = v; break; }
+    }
+    if (!raw) return '';
+    try { raw = decodeURIComponent(raw); } catch (e) { /* leave as-is */ }
+    return raw.replace(/\+/g, ' ').trim();
+  }
+
+  // Encode a place token for use in a query param (Google convention: + for space).
+  function googleTokenEncode(s) {
+    return encodeURIComponent(s).replace(/%20/g, '+');
+  }
+
+  // Build a single multi-waypoint directions URL from an ordered list of place
+  // tokens. The LAST token is the destination; preceding tokens are waypoints.
+  //   provider 'google' -> /maps/dir/?api=1 ... waypoints=A|B|C (pipe-separated)
+  //   provider 'apple'  -> /directions ... repeated waypoint=A&waypoint=B
+  // Returns '' for an empty/invalid stop list.
+  function buildItinerary(provider, tokens) {
+    if (!Array.isArray(tokens) || tokens.length === 0) return '';
+    var dest = tokens[tokens.length - 1];
+    var waypoints = tokens.slice(0, -1);
+    var url;
+    if (provider === 'google') {
+      url = 'https://www.google.com/maps/dir/?api=1&destination=' + googleTokenEncode(dest);
+      if (waypoints.length) {
+        url += '&waypoints=' + waypoints.map(googleTokenEncode).join('|');
+      }
+      url += '&travelmode=driving';
+      return url;
+    }
+    if (provider === 'apple') {
+      url = 'https://maps.apple.com/directions?destination=' + encodeURIComponent(dest);
+      for (var i = 0; i < waypoints.length; i++) {
+        url += '&waypoint=' + encodeURIComponent(waypoints[i]);
+      }
+      url += '&mode=driving';
+      return url;
+    }
+    return '';
+  }
+
   var RouteLink = {
     DEFAULT_PROVIDER: DEFAULT_PROVIDER,
     parse: parse,
@@ -260,6 +336,8 @@
     buildAppleUrl: buildAppleUrl,
     hostProvider: hostProvider,
     normalizeForNavigation: normalizeForNavigation,
+    placeToken: placeToken,
+    buildItinerary: buildItinerary,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
