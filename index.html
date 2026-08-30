@@ -3,79 +3,158 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Shared turn-by-turn route handoff for road trips. Passengers suggest routes; the driver switches navigation with one tap." />
+
   <title>Route Relay</title>
-  <meta name="description" content="Shared turn-by-turn route handoff for road trips." />
-  <style>
-    :root {
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      padding-top: calc(24px + env(safe-area-inset-top));
-      padding-bottom: calc(24px + env(safe-area-inset-bottom));
-    }
-    .card {
-      max-width: 460px;
-      width: 100%;
-      background: var(--panel);
-      border-radius: 16px;
-      padding: 32px 28px;
-      text-align: center;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.35);
-    }
-    .badge {
-      display: inline-block;
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      border-radius: 999px;
-      padding: 4px 12px;
-      margin-bottom: 18px;
-    }
-    h1 { margin: 0 0 10px; font-size: 30px; }
-    p { color: var(--muted); line-height: 1.55; margin: 0 0 22px; font-size: 16px; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-    .links a {
-      background: #0b1220;
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 14px;
-    }
-  </style>
+
+  <!-- PWA / Add to Home Screen -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0f1115" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Route Relay" />
+
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="card">
-    <span class="badge">Planning phase</span>
-    <h1>Route Relay</h1>
-    <p>
-      Shared turn-by-turn route handoff for road trips. Passengers suggest Google Maps or
-      Apple Maps routes; the driver switches navigation with one tap.
-    </p>
-    <p>This is a placeholder page — the app is not built yet.</p>
-    <div class="links">
-      <a href="https://github.com/automated-freak/roadtrip-route-relay">Repository</a>
-      <a href="https://github.com/automated-freak/roadtrip-route-relay/blob/main/docs/PLAN.md">Build plan</a>
-      <a href="https://github.com/automated-freak/roadtrip-route-relay/blob/main/docs/ARCHITECTURE.md">Architecture</a>
-    </div>
-  </div>
+  <!-- ============ SCREEN 1 · Landing / create-or-join ============ -->
+  <section id="view-landing" class="view" aria-labelledby="landing-title">
+    <main class="container container-narrow">
+      <header class="landing-head">
+        <h1 id="landing-title" class="wordmark">Route Relay</h1>
+        <p class="tagline">Road-trip navigation handoff</p>
+      </header>
+
+      <div class="field-group">
+        <label class="field-label" for="trip-code">Trip code</label>
+        <div class="code-row">
+          <input
+            id="trip-code"
+            class="code-input"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            autocorrect="off"
+            spellcheck="false"
+            maxlength="32"
+            placeholder="X7K2Q"
+            aria-describedby="code-hint"
+          />
+          <button id="btn-new" class="btn btn-secondary btn-square" type="button">New</button>
+        </div>
+        <p id="code-hint" class="hint">Enter or paste a trip code — or open a shared link and it fills in automatically.</p>
+        <button id="btn-copy" class="btn btn-ghost btn-block" type="button" hidden>Copy share link</button>
+      </div>
+
+      <fieldset class="field-group" role="radiogroup" aria-label="I am…">
+        <legend class="field-label">I am…</legend>
+        <div class="segmented">
+          <label class="seg">
+            <input type="radio" name="role" value="driver" />
+            <span>🚗 Driving</span>
+          </label>
+          <label class="seg">
+            <input type="radio" name="role" value="passenger" checked />
+            <span>🧍 Riding</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="field-group">
+        <label class="field-label" for="nickname">Nickname <span class="optional">(optional)</span></label>
+        <input id="nickname" class="text-input" type="text" autocomplete="nickname" maxlength="24" placeholder="You" />
+      </div>
+
+      <button id="btn-join" class="btn btn-primary btn-block btn-large" type="button">Join trip</button>
+
+      <p class="footnote">No account · the code is the key</p>
+    </main>
+  </section>
+
+  <!-- ============ SCREEN 2 · Passenger view ============ -->
+  <section id="view-passenger" class="view" aria-labelledby="passenger-title" hidden>
+    <header class="app-header">
+      <div class="app-title">Route Relay</div>
+      <span id="passenger-badge" class="badge badge-passenger">X7K2Q · Riding</span>
+    </header>
+
+    <main class="container">
+      <h2 id="passenger-title" class="sr-only">Passenger view</h2>
+
+      <button id="btn-add-stop" class="btn btn-primary btn-block btn-large" type="button" aria-expanded="false" aria-controls="suggestion-panel">
+        <span class="btn-plus">+</span> Add a stop
+      </button>
+
+      <div id="suggestion-panel" class="panel" hidden>
+        <div class="field-group">
+          <label class="field-label" for="dest-input">Type or paste a place / link</label>
+          <input id="dest-input" class="text-input" type="text" inputmode="text" autocomplete="off" placeholder="Tim Hortons near me" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="label-input">Label <span class="optional">(optional)</span></label>
+          <input id="label-input" class="text-input" type="text" autocomplete="off" maxlength="48" placeholder="Gas — Costco" />
+        </div>
+
+        <fieldset class="field-group" role="radiogroup" aria-label="Stop type">
+          <legend class="field-label">Type</legend>
+          <div class="segmented">
+            <label class="seg">
+              <input type="radio" name="kind" value="destination" checked />
+              <span>New destination</span>
+            </label>
+            <label class="seg">
+              <input type="radio" name="kind" value="waypoint" />
+              <span>Stop on the way</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <p id="panel-error" class="error" role="alert" hidden></p>
+
+        <button id="btn-submit" class="btn btn-primary btn-block" type="button">Add to trip</button>
+        <button id="btn-cancel-add" class="btn btn-ghost btn-block" type="button">Cancel</button>
+      </div>
+
+      <div class="section-head">Live queue <span class="muted">· newest first</span></div>
+      <ul id="passenger-queue" class="queue" aria-live="polite"></ul>
+      <p id="passenger-empty" class="empty" hidden>Nothing queued yet — add the first stop above.</p>
+    </main>
+  </section>
+
+  <!-- ============ SCREEN 3 · Driver view ============ -->
+  <section id="view-driver" class="view driver" aria-labelledby="driver-title" hidden>
+    <header class="app-header">
+      <div class="app-title">Route Relay</div>
+      <span id="driver-badge" class="badge badge-driver">X7K2Q · Driving</span>
+    </header>
+
+    <main class="container">
+      <h2 id="driver-title" class="sr-only">Driver view</h2>
+
+      <div id="awake-indicator" class="awake" role="status">👁 Screen stays awake while this view is open</div>
+
+      <div class="section-head">Now navigating</div>
+      <div id="active-route" aria-live="polite"></div>
+
+      <div class="section-head">Up next</div>
+      <ul id="driver-queue" class="queue" aria-live="polite"></ul>
+      <p id="driver-empty" class="empty" hidden>Queue is clear.</p>
+
+      <div class="queue-actions">
+        <button id="btn-reorder" class="btn btn-secondary" type="button" aria-pressed="false">⇅ Reorder</button>
+        <button id="btn-clear" class="btn btn-danger" type="button">Clear queue</button>
+      </div>
+    </main>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js" defer></script>
 </body>
 </html>

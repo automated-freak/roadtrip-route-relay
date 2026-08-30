@@ -2,9 +2,10 @@
 
 Shared turn-by-turn route handoff for road trips.
 
-**Status: Planning / documentation only.** No application code has been written yet.
-This repository currently holds the project plan, architecture decisions, and research
-notes so that future sessions can build the app phase by phase.
+**Status: Phase 2 complete — static frontend shell.** The three screens
+(landing / passenger / driver) are built as a mobile-first static site driven by an
+in-memory mock store. Realtime backend (Firebase), link parsing, and one-tap navigation
+arrive in later phases.
 
 ---
 
@@ -54,13 +55,18 @@ Collaboration features for a small group (≈3 people in the same car, all on iP
 ```
 roadtrip-route-relay/
 ├── README.md                 ← you are here
-├── index.html                ← placeholder landing page (so GitHub Pages resolves)
-├── docs/
-│   ├── PLAN.md               ← phased execution plan (start here to build)
-│   ├── ARCHITECTURE.md       ← technical decisions and data model
-│   ├── RESEARCH.md           ← findings and sources that informed the plan
-│   └── SECURITY.md           ← the "minimal security" model and its tradeoffs
-└── (future: src/, public/, etc. — created in Phase 2+)
+├── index.html                ← static app shell (all 3 screens)
+├── styles.css                ← mobile-first, dark-mode + safe-area styles
+├── app.js                    ← in-memory mock store + view logic
+├── manifest.webmanifest      ← PWA manifest
+├── sw.js                     ← service worker (offline shell)
+├── icons/                    ← app icons (192/512/maskable/apple-touch)
+├── scripts/gen-icons.py      ← regenerates the icons
+└── docs/
+    ├── PLAN.md               ← phased execution plan (start here to build)
+    ├── ARCHITECTURE.md       ← technical decisions and data model
+    ├── RESEARCH.md           ← findings and sources that informed the plan
+    └── SECURITY.md           ← the "minimal security" model and its tradeoffs
 ```
 
 ## Where to start
@@ -75,12 +81,12 @@ roadtrip-route-relay/
 | Question | Answer |
 |----------|--------|
 | Hosting | GitHub Pages (free, HTTPS) |
-| Frontend | Static, mobile-first (vanilla HTML/CSS/JS to start; PWA-able) |
+| Frontend | Static, mobile-first (vanilla HTML/CSS/JS; PWA manifest + icons + service worker) |
 | Shared state | Firebase Realtime Database (free Spark tier) |
 | Auth | None. Shared trip code / URL (see `docs/SECURITY.md`) |
 | Map providers | Google Maps + Apple Maps deep links (both handled on iOS) |
 | Collaboration | Multistop itinerary, one-tap navigation |
-| Status | Documentation only — no code yet |
+| Status | Phase 2 static shell complete (no backend yet) |
 
 ## Live site
 
