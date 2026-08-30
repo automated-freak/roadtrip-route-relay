@@ -14,6 +14,9 @@ node server.js
 - Creates `backend/data/relay.db` on first run (gitignored).
 - Zero npm dependencies (needs Node ≥ 22.5 for the built-in `node:sqlite`; Node 24 is
   installed).
+- **Auto-cleans stale trips:** routes idle longer than `STALE_HOURS` (default `168`, i.e.
+  7 days) are deleted on startup and every hour (`SWEEP_INTERVAL_MS`). Override either
+  with env vars if you want a longer/shorter window.
 
 ## 2. Expose it over HTTPS
 

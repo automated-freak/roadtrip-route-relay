@@ -17,8 +17,13 @@
  *   POST   /api/trips/:code/routes/:id/activate     -> set active, demote previous
  *   POST   /api/trips/:code/routes/reorder          -> { orderedIds: [...] } full-trip order
  *
+ * Maintenance: a stale-trip sweep deletes routes whose updated_at is older than
+ * STALE_HOURS (see sweepStaleRoutes). It runs once at startup and then on a
+ * timer (SWEEP_INTERVAL_MS). No client-driven expiry.
+ *
  * Env (optional): PORT (default 8787), HOST (default 127.0.0.1),
- *                 DATA_DIR (default ./data), DB_PATH (default <DATA_DIR>/relay.db)
+ *                 DATA_DIR (default ./data), DB_PATH (default <DATA_DIR>/relay.db),
+ *                 STALE_HOURS (default 168), SWEEP_INTERVAL_MS (default 3600000)
  */
 
 const http = require('node:http');
@@ -31,6 +36,13 @@ const PORT = Number(process.env.PORT || 8787);
 const HOST = process.env.HOST || '127.0.0.1';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'relay.db');
+// Stale-trip sweep: a route is "stale" once it has gone this long without any
+// update (create/patch/activate/reorder). Default 168h = 7 days, matching the
+// one-week-trip scope in docs/SECURITY.md — a week-long trip is never touched,
+// and its data self-cleans ~a week after the last edit.
+const STALE_HOURS = Number(process.env.STALE_HOURS || 168);
+const STALE_MS = STALE_HOURS * 60 * 60 * 1000;
+const SWEEP_INTERVAL_MS = Number(process.env.SWEEP_INTERVAL_MS || 60 * 60 * 1000);
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -155,6 +167,18 @@ function activateRoute(tripCode, id) {
 function deleteRoute(tripCode, id) {
   const res = db.prepare('DELETE FROM routes WHERE trip_code = ? AND id = ?').run(tripCode, id);
   return res.changes > 0;
+}
+
+// Delete routes idle longer than the cutoff (epoch ms). Server-side only — the
+// client has no expiry endpoint, so a stale trip can't be kept alive by an app
+// that stops polling. Called once at startup and then on a timer.
+function sweepStaleRoutes(cutoffMs) {
+  if (cutoffMs === undefined) cutoffMs = now() - STALE_MS;
+  const res = db.prepare('DELETE FROM routes WHERE updated_at < ?').run(cutoffMs);
+  if (res.changes > 0) {
+    console.log(`[route-relay] sweep: removed ${res.changes} stale route(s) (updated_at < ${cutoffMs})`);
+  }
+  return res.changes;
 }
 
 function reorderRoutes(tripCode, orderedIds) {
@@ -295,7 +319,36 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`[route-relay] listening on http://${HOST}:${PORT}`);
-  console.log(`[route-relay] database: ${DB_PATH}`);
-});
+if (require.main === module) {
+  server.listen(PORT, HOST, () => {
+    console.log(`[route-relay] listening on http://${HOST}:${PORT}`);
+    console.log(`[route-relay] database: ${DB_PATH}`);
+    console.log(
+      `[route-relay] stale sweep: routes idle > ${STALE_HOURS}h removed every ${Math.round(SWEEP_INTERVAL_MS / 60000)}m`
+    );
+    sweepStaleRoutes(); // clean up at startup
+    setInterval(sweepStaleRoutes, SWEEP_INTERVAL_MS);
+  });
+}
+
+// Exported for tests (scripts/test-sweep.js) and reuse; no side effects beyond
+// DB init when required.
+module.exports = {
+  server,
+  db,
+  sweepStaleRoutes,
+  insertRoute,
+  getRoutes,
+  getRoute,
+  updateRoute,
+  activateRoute,
+  deleteRoute,
+  reorderRoutes,
+  now,
+  rowToRoute,
+  VALID_STATUS,
+  VALID_KIND,
+  VALID_PROVIDER,
+  TRIP_RE,
+  STALE_MS,
+};

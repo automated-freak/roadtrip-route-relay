@@ -19,6 +19,8 @@ Defaults to `http://127.0.0.1:8787`, storing data in `backend/data/relay.db`
 | `HOST` | `127.0.0.1` | Bind address (`0.0.0.0` to expose directly) |
 | `DATA_DIR` | `./data` | Directory for the SQLite file |
 | `DB_PATH` | `<DATA_DIR>/relay.db` | Full path to the SQLite file |
+| `STALE_HOURS` | `168` | Hours of inactivity after which a route is swept (7 days) |
+| `SWEEP_INTERVAL_MS` | `3600000` | How often the stale sweep runs (1 hour) |
 
 ## Expose over HTTPS (for the phones)
 
@@ -56,3 +58,13 @@ node server.js   # recreates the schema on start
 
 Trip rooms are isolated by `trip_code`; a client can only ever see/change the routes
 for the code it queries (there is no endpoint that lists codes).
+
+## Stale-trip cleanup
+
+Routes whose `updated_at` is older than `STALE_HOURS` (default 7 days) are deleted
+server-side. The sweep runs once at startup and then every `SWEEP_INTERVAL_MS`. It is
+purely time-based (`DELETE … WHERE updated_at < cutoff`) and there is **no client-driven
+expiry endpoint** — a device that stops polling can't keep a room alive, and no client
+code can trigger deletion. With the 7-day default, a one-week trip is never touched
+and its data self-cleans about a week after the last edit. See `docs/SECURITY.md` and
+`docs/SETUP.md`.
