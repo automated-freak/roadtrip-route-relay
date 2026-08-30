@@ -29,6 +29,10 @@
     nickname: '',
     routes: [],
     reorderMode: false,
+    notify: false, // new-stop alerts (disabled by default)
+    newSinceOpen: 0, // unread new-stop count for the badge
+    knownIds: new Set(), // route ids we've already seen (for new-route detection)
+    seeded: false, // have we seeded knownIds from the first poll yet?
   };
 
   const API_BASE = (window.RR_CONFIG && window.RR_CONFIG.apiBase) || '';
@@ -67,7 +71,20 @@
     if (!store.tripCode) return;
     try {
       const data = await api(routesPath());
-      store.routes = (data && data.routes) || [];
+      const incoming = (data && data.routes) || [];
+
+      // First successful poll seeds the "known" id set without notifying, so a
+      // freshly joined trip doesn't announce its whole history as new.
+      if (!store.seeded) {
+        store.seeded = true;
+        store.knownIds = new Set(incoming.map((r) => r.id));
+      } else {
+        const fresh = incoming.filter((r) => !store.knownIds.has(r.id));
+        if (fresh.length && store.notify) notifyNewRoutes(fresh);
+        store.knownIds = new Set(incoming.map((r) => r.id));
+      }
+
+      store.routes = incoming;
       setConnection(true);
       renderCurrent();
     } catch (e) {
@@ -168,6 +185,81 @@
     toastTimer = setTimeout(() => {
       el.classList.remove('show');
     }, ms || 2200);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * New-route notification (subtle, disabled by default, easily muted)
+   * ------------------------------------------------------------------ */
+  let audioCtx = null;
+  let notifyBadgeTimer = null;
+
+  function playChime() {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.07, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    } catch (e) {
+      /* audio unavailable — ignore */
+    }
+  }
+
+  function renderNotifyBadge() {
+    $$('.notify-badge').forEach((el) => {
+      el.textContent = store.newSinceOpen;
+      el.hidden = store.newSinceOpen === 0;
+    });
+  }
+
+  function renderNotifyButton() {
+    $$('.btn-notify').forEach((btn) => {
+      const bell = btn.querySelector('.bell');
+      if (bell) bell.textContent = store.notify ? '🔔' : '🔕';
+      btn.setAttribute('aria-pressed', String(store.notify));
+      btn.setAttribute('aria-label', store.notify ? 'New-stop alerts: on' : 'New-stop alerts: muted');
+    });
+  }
+
+  function clearNotifyBadge() {
+    store.newSinceOpen = 0;
+    renderNotifyBadge();
+  }
+
+  function notifyNewRoutes(fresh) {
+    store.newSinceOpen += fresh.length;
+    renderNotifyBadge();
+    const label = fresh
+      .map((r) => r.label || 'Untitled stop')
+      .slice(0, 2)
+      .join(', ');
+    const more = fresh.length > 2 ? ` +${fresh.length - 2} more` : '';
+    toast(`🔔 New stop${fresh.length === 1 ? '' : 's'}: ${esc(label)}${more}`, 2600);
+    if ('vibrate' in navigator) {
+      try { navigator.vibrate(60); } catch (e) { /* unsupported */ }
+    }
+    playChime();
+    clearTimeout(notifyBadgeTimer);
+    notifyBadgeTimer = setTimeout(clearNotifyBadge, 6000);
+  }
+
+  function toggleNotify() {
+    store.notify = !store.notify;
+    try { localStorage.setItem('rr.notify', store.notify ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    clearNotifyBadge();
+    renderNotifyButton();
+    toast(store.notify ? '🔔 New-stop alerts on' : '🔕 New-stop alerts muted');
   }
 
   /* ------------------------------------------------------------------ *
@@ -302,6 +394,16 @@
     return '';
   }
 
+  // A prominent destination-vs-waypoint chip for the driver queue, so the
+  // driver can tell at a glance which stop is the final destination vs a stop
+  // along the way before reordering and building the combined itinerary.
+  function kindBadge(route) {
+    if (route.kind === 'waypoint') {
+      return '<span class="kind-badge kind-waypoint">📍 on the way</span>';
+    }
+    return '<span class="kind-badge kind-destination">🎯 destination</span>';
+  }
+
   /* ----- Passenger queue ----- */
   function renderPassenger() {
     updateHeaderBadges();
@@ -384,6 +486,7 @@
             <div class="card card-driver" data-navigate="${esc(r.id)}" role="button" tabindex="0"
                  aria-label="Navigate to ${esc(r.label || 'Untitled stop')}">
               <p class="card-label">${esc(r.label || 'Untitled stop')}</p>
+              <p class="card-kind">${kindBadge(r)}</p>
               <p class="card-meta">${metaLine(r)} · ${timeAgo(r.createdAt)}</p>
               <div class="nav-row">
                 <button class="btn btn-primary btn-navigate" type="button" data-navigate="${esc(r.id)}">▶ Navigate</button>
@@ -406,6 +509,11 @@
     store.tripCode = code;
     store.role = getRoleInput();
     store.nickname = ($('#nickname').value || '').trim();
+
+    // Reset new-route detection for the freshly joined trip.
+    store.seeded = false;
+    store.knownIds = new Set();
+    store.newSinceOpen = 0;
 
     // Update the share URL so the code is in the hash.
     try {
@@ -497,6 +605,8 @@
         method: 'POST',
         body: JSON.stringify(payload),
       });
+      // Remember our own new route so it isn't announced as a "new stop" to us.
+      store.knownIds.add(created.id);
       store.routes.unshift(created);
       renderCurrent();
       $('#dest-input').value = '';
@@ -577,6 +687,57 @@
     }
     await fetchRoutes();
     toast('Marked done');
+  }
+
+  // Build one combined multi-waypoint itinerary from the queued (pending) stops
+  // and launch it in a single tap. The last stop is the destination; everything
+  // before it is a waypoint. Reuses the same one-tap handoff as navigate().
+  async function startItinerary() {
+    const pending = store.routes
+      .filter((r) => r.status === 'pending')
+      .sort((a, b) => b.sortOrder - a.sortOrder);
+
+    if (pending.length === 0) {
+      toast('Queue is empty — nothing to route.');
+      return;
+    }
+
+    // Ordered place tokens: prefer the URL's own place, fall back to the label.
+    const stops = pending
+      .map((r) => ({ route: r, token: (window.RouteLink.placeToken(r.url) || (r.label || '').trim()) }))
+      .filter((s) => s.token);
+
+    if (stops.length === 0) {
+      toast('No routable stops — add a place or paste a map link first.');
+      return;
+    }
+
+    const provider = 'apple'; // all-iPhone default (PRODUCT_SPEC §7); Google builder is in link-parser
+    const url = window.RouteLink.buildItinerary(provider, stops.map((s) => s.token));
+    const normalized = window.RouteLink.normalizeForNavigation(url);
+
+    if (!isSafeMapUrl(normalized)) {
+      toast('Couldn’t build a safe route link.');
+      return;
+    }
+
+    // Mark the final destination active so the driver has a clear "now navigating"
+    // state; await so the activation isn't aborted by the navigation below.
+    const destinationRoute = stops[stops.length - 1].route;
+    try {
+      await api(routesPath() + '/' + encodeURIComponent(destinationRoute.id) + '/activate', { method: 'POST' });
+    } catch (e) {
+      toast('Couldn’t activate — ' + (e.message || 'offline'));
+      return;
+    }
+    await fetchRoutes();
+
+    toast(`🚗 Starting ${stops.length}-stop trip via ${providerLabel(provider)} — if it opens in your browser, a maps app isn’t installed.`, 4200);
+    try {
+      window.location.href = normalized;
+    } catch (e) {
+      toast('Couldn’t open that link on this device.');
+    }
   }
 
   async function clearQueue() {
@@ -670,6 +831,10 @@
 
     $('#btn-reorder').addEventListener('click', toggleReorder);
     $('#btn-clear').addEventListener('click', clearQueue);
+    $('#btn-itinerary').addEventListener('click', startItinerary);
+
+    // Notification toggle (present in both app headers; class-based).
+    $$('.btn-notify').forEach((btn) => btn.addEventListener('click', toggleNotify));
 
     // Delegated clicks for dynamically rendered cards.
     document.addEventListener('click', (e) => {
@@ -714,7 +879,17 @@
     if (m) {
       store.tripCode = m[1].toUpperCase();
     }
+
+    // Restore the new-stop notification preference (muted by default).
+    try {
+      store.notify = localStorage.getItem('rr.notify') === '1';
+    } catch (e) {
+      store.notify = false;
+    }
+
     bindEvents();
+    renderNotifyButton();
+    renderNotifyBadge();
     renderLanding();
     showView('landing');
 

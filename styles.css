@@ -432,6 +432,63 @@ body {
   color: #7ddb6a;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Notification bell (new-stop alerts, muted by default) */
+.btn-notify {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s ease;
+}
+
+.btn-notify:hover {
+  border-color: var(--border-strong);
+}
+
+.btn-notify:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn-notify .bell {
+  line-height: 1;
+}
+
+.notify-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 /* --------------------------------------------------------------------------
    Suggestion panel (passenger)
    -------------------------------------------------------------------------- */
@@ -585,6 +642,34 @@ body {
   font-size: 20px;
 }
 
+/* Kind chip (destination vs stop on the way) */
+.card-kind {
+  margin: 4px 0 0;
+}
+
+.kind-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.kind-destination {
+  color: #7ab7ff;
+  background: rgba(26, 123, 255, 0.14);
+  border-color: rgba(26, 123, 255, 0.5);
+}
+
+.kind-waypoint {
+  color: #7ddb6a;
+  background: rgba(52, 199, 89, 0.14);
+  border-color: rgba(52, 199, 89, 0.5);
+}
+
 .card-driver .nav-row {
   margin-top: 12px;
   display: flex;
@@ -623,6 +708,10 @@ body {
 /* --------------------------------------------------------------------------
    Queue actions (driver)
    -------------------------------------------------------------------------- */
+.itinerary-hint {
+  margin: 10px 0 0;
+}
+
 .queue-actions {
   display: flex;
   gap: 10px;

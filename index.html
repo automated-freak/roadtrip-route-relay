@@ -80,7 +80,13 @@
   <section id="view-passenger" class="view" aria-labelledby="passenger-title" hidden>
     <header class="app-header">
       <div class="app-title">Route Relay</div>
-      <span id="passenger-badge" class="badge badge-passenger">X7K2Q · Riding</span>
+      <div class="header-actions">
+        <span id="passenger-badge" class="badge badge-passenger">X7K2Q · Riding</span>
+        <button class="btn-notify" type="button" aria-pressed="false" aria-label="New-stop alerts: muted">
+          <span class="bell">🔕</span>
+          <span class="notify-badge" hidden>0</span>
+        </button>
+      </div>
     </header>
 
     <main class="container">
@@ -131,7 +137,13 @@
   <section id="view-driver" class="view driver" aria-labelledby="driver-title" hidden>
     <header class="app-header">
       <div class="app-title">Route Relay</div>
-      <span id="driver-badge" class="badge badge-driver">X7K2Q · Driving</span>
+      <div class="header-actions">
+        <span id="driver-badge" class="badge badge-driver">X7K2Q · Driving</span>
+        <button class="btn-notify" type="button" aria-pressed="false" aria-label="New-stop alerts: muted">
+          <span class="bell">🔕</span>
+          <span class="notify-badge" hidden>0</span>
+        </button>
+      </div>
     </header>
 
     <main class="container">
@@ -145,6 +157,9 @@
       <div class="section-head">Up next</div>
       <ul id="driver-queue" class="queue" aria-live="polite"></ul>
       <p id="driver-empty" class="empty" hidden>Queue is clear.</p>
+
+      <button id="btn-itinerary" class="btn btn-primary btn-block btn-large" type="button">🚗 Start trip</button>
+      <p class="hint itinerary-hint">Routes every queued stop in one go — reorder so your final destination is last, stops along the way first.</p>
 
       <div class="queue-actions">
         <button id="btn-reorder" class="btn btn-secondary" type="button" aria-pressed="false">⇅ Reorder</button>
