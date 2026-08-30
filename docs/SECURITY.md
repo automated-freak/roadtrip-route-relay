@@ -5,6 +5,11 @@ a handful of people on the same road trip. This document makes the security post
 its tradeoffs explicit so future sessions implement it faithfully (and don't accidentally
 over-engineer it).
 
+**Design context (2026-08-30):** this app is used by **3 people, all in the same car.**
+Security is explicitly *not* a priority — the goal is friction-free handoff. We keep the
+unguessable trip code (below) only because it's essentially free; anything heavier is out
+of scope and should be resisted.
+
 ---
 
 ## Threat model

@@ -26,12 +26,20 @@ That's slow, unsafe, and kills the fun of a spontaneous road trip.
 
 Route Relay is a lightweight, mobile-friendly web app where:
 
-- **Passengers** paste a Google Maps or Apple Maps link (with an optional label) to
-  suggest a new route or stop.
-- **The driver** opens the same shared page on their own phone and sees a live list of
-  suggested routes. Tapping one launches it in Google Maps / Apple Maps on the driver's
-  phone, which immediately appears on the car display.
+- **Passengers** type a destination ("Tim Hortons near me") or paste a Google Maps /
+  Apple Maps link (with an optional label) to suggest a new stop or destination.
+- **The driver** opens the same shared page on their own phone and sees a live queue of
+  suggestions. Tapping one launches it — straight into turn-by-turn navigation — in
+  Google Maps / Apple Maps on the driver's phone, which immediately appears on the car
+  display.
 - **Switching navigation is one tap** — no searching, no hand-off of the phone.
+
+Collaboration features for a small group (≈3 people in the same car):
+
+- **Vote** on suggestions so the group's pick rises to the top.
+- **Build a multistop itinerary** (gas → food → hotel) and launch it as one route.
+- **Cross-provider handoff** — an Apple Maps link still works on an Android driver
+  (converted to Google Maps), and vice versa.
 
 ## Design goals
 
@@ -59,7 +67,8 @@ roadtrip-route-relay/
 
 ## Where to start
 
-1. Read [`docs/PLAN.md`](docs/PLAN.md) for the phased build plan.
+1. Read [`docs/PLAN.md`](docs/PLAN.md) for the phased build plan and the **handoff
+   ledger** (each phase is designed to be completed in its own conversation).
 2. Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the technical approach.
 3. Read [`docs/RESEARCH.md`](docs/RESEARCH.md) for the why-behind-the-choices.
 
@@ -71,7 +80,8 @@ roadtrip-route-relay/
 | Frontend | Static, mobile-first (vanilla HTML/CSS/JS to start; PWA-able) |
 | Shared state | Firebase Realtime Database (free Spark tier) |
 | Auth | None. Shared trip code / URL (see `docs/SECURITY.md`) |
-| Map providers | Google Maps + Apple Maps deep links (both handled) |
+| Map providers | Google Maps + Apple Maps deep links (both handled, incl. cross-provider fallback) |
+| Collaboration | Votes, multistop itinerary, presence, one-tap navigation |
 | Status | Documentation only — no code yet |
 
 ## Live site

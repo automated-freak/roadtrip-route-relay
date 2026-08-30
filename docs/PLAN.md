@@ -9,6 +9,41 @@ sessions can pick up exactly where the last one left off.
 
 ---
 
+## 🗂️ Handoff ledger
+
+This ledger is the source of truth for **what's done, what's next, and how to pick up the
+work in a fresh conversation.** The project is designed so each phase can be handled in a
+new session.
+
+**How to use it:**
+
+1. **Starting a session:** read this ledger first, then the phase marked "In progress" (or
+   the first "Not started" phase). Read `docs/ARCHITECTURE.md` and `docs/RESEARCH.md` for
+   context.
+2. **Working:** build only the current phase. Small commits. Verify against the phase's
+   Definition of done.
+3. **Finishing a phase:** check off its Definition-of-done items, update its row below
+   (status → Done, date, summary), write a one-line handoff note for the *next* phase, and
+   commit. Mark the next phase "In progress" only if you are actually starting it.
+4. **Stuck or blocked:** note it in the ledger row so the next session doesn't rediscover
+   the problem.
+
+| # | Phase | Status | Last worked | Outcome / notes | Handoff to next session |
+|---|-------|--------|-------------|-----------------|--------------------------|
+| 0 | Foundation & tooling | ✅ Done | 2026-08-29 | Repo + docs + placeholder `index.html` created; Pages enabled | Start Phase 1 |
+| 1 | Product spec & UX wireframes | ⬜ Not started | — | — | — |
+| 2 | Frontend shell | ⬜ Not started | — | — | — |
+| 3 | Backend integration (realtime) | ⬜ Not started | — | — | — |
+| 4 | Route submission & parsing | ⬜ Not started | — | — | — |
+| 5 | Driver queue & one-tap handoff | ⬜ Not started | — | — | — |
+| 6 | Collaboration polish | ⬜ Not started | — | — | — |
+| 7 | Hardening & edge cases | ⬜ Not started | — | — | — |
+| 8 | Deploy & handoff | ⬜ Not started | — | — | — |
+
+Legend: ✅ Done · 🔄 In progress · ⬜ Not started · ⚠️ Blocked
+
+---
+
 ## Phase 0 — Foundation & tooling (DONE in this repo)
 
 Set up the repository and the bare minimum so the project has a home and a live URL.
@@ -33,16 +68,18 @@ Set up the repository and the bare minimum so the project has a home and a live 
 Turn the concept into concrete screens and interactions so the build doesn't drift.
 
 **Scope**
-- Define the two primary roles: **Passenger** (submit routes) and **Driver** (the phone
-  on the car display).
+- Define the two roles and the device model: **Driver** (the phone on the car display) and
+  **Passenger** (everyone else). Roles are self-selected at join time, not accounts.
 - Define the screens:
-  1. **Landing / create-or-join trip** (enter or generate a trip code).
-  2. **Passenger view** — big "Add a route" button, paste field, optional label, list of
-     what's already been suggested.
-  3. **Driver view** — large, glove-friendly list of routes with one-tap launch, current
-     route highlighted, "mark done / clear" actions.
+  1. **Landing / create-or-join trip** — generate or enter a trip code; choose "I'm driving"
+     or "I'm riding"; pick nickname.
+  2. **Passenger view** — big "Add a stop" button, **type-or-paste** field, optional label,
+     optional "stop along the way vs new destination" toggle, vote buttons, live list.
+  3. **Driver view** — large, glove-friendly queue, one-tap launch, active-route highlight,
+     "mark done / clear" actions, screen stays awake.
 - Sketch rough wireframes (text or simple SVG in `docs/wireframes/`).
-- Write the acceptance criteria for each screen.
+- Write the acceptance criteria for each screen, including cross-provider and one-tap-nav
+  behaviors from `docs/RESEARCH.md` §6.
 
 **Definition of done**
 - [ ] `docs/wireframes/` contains a wireframe for each screen
@@ -80,7 +117,7 @@ real time.
 **Scope**
 - Create a Firebase project (Spark/free tier).
 - Configure Realtime Database with **test-mode rules for development** (open read/write
-  — see `docs/SECURITY.md`; tighten in Phase 6).
+  — see `docs/SECURITY.md`; tighten in Phase 7).
 - Add a trip "room" concept: each trip is a node keyed by a short code.
 - Replace the mock store with a realtime store: subscribe to the trip node, render
   updates live, handle reconnects and initial empty state.
@@ -96,47 +133,80 @@ real time.
 
 ## Phase 4 — Route submission & parsing
 
-Make it trivial for passengers to submit a Google Maps or Apple Maps route.
+Make it trivial for passengers to submit a destination — **typed or pasted**.
 
 **Scope**
-- Accept a pasted link (and/or a raw destination string).
+- Accept **free-text destination** (e.g. "Tim Hortons near me") and turn it into a valid
+  Google/Apple directions URL.
+- Accept a **pasted link** (and/or a raw destination string).
 - Classify the link: Google Maps vs Apple Maps vs unknown.
 - Normalize common formats:
   - Google: `https://www.google.com/maps/...`, `https://maps.app.goo.gl/...`, `https://goo.gl/maps/...`, cross-platform `https://www.google.com/maps/dir/?api=1&...`
-  - Apple: `https://maps.apple.com/?daddr=...` (and `saddr`/`dirflg` variants), and the newer **unified Maps URL** format (iOS 18.4+ — see `docs/RESEARCH.md`).
+  - Apple: legacy `https://maps.apple.com/?daddr=...` (and `saddr`/`dirflg` variants), and the newer **unified Maps URL** format (`/directions?...` — iOS 18.4+; see `docs/RESEARCH.md`).
+- Set the route's `kind` (destination vs waypoint) and `provider`.
 - Store the canonical link + a user-supplied label + timestamp + author nickname (optional).
-- Show helpful validation errors for unsupported/empty input.
+- Show helpful validation errors for unsupported/empty input (reject `javascript:`, `data:`, etc.).
 
 **Definition of done**
 - [ ] Google and Apple links are both accepted and correctly classified
+- [ ] Typed destinations produce a valid Google and Apple URL
 - [ ] Short links (`maps.app.goo.gl`) stored as-is (they resolve on the target device)
 - [ ] A list of representative test links (good + bad) documented in `docs/RESEARCH.md`
 - [ ] Validation errors are clear and non-blocking
 
 ---
 
-## Phase 5 — Driver queue & handoff
+## Phase 5 — Driver queue & one-tap handoff
 
 Deliver the core value: one-tap route switching on the driver's phone.
 
 **Scope**
-- Driver view: live queue of routes, newest-first or manually reorderable.
+- Driver view: live queue of routes, sorted by votes (then newest), manually reorderable.
 - Tapping a route opens the deep link on the driver's phone (which launches the native
   maps app → CarPlay / Android Auto). No in-app map, no searching.
+- **One-tap navigation:** append `dir_action=navigate` (Google) / `start=N` (Apple) so the
+  tap jumps straight into turn-by-turn when possible.
+- **Cross-provider fallback:** if the route's provider can't open on the driver's device,
+  convert it when the destination is extractable (see `docs/RESEARCH.md` §6).
 - Track an "active" route (the one currently navigating) and show it prominently.
 - Allow marking routes done / removing them (with a lightweight confirmation to avoid
   accidental clears).
+- **Keep screen awake** while the driver view is open (Screen Wake Lock API, graceful fallback).
 - Handle the case where no maps app is installed (open in browser instead).
 
 **Definition of done**
 - [ ] Driver can launch any submitted route in ≤ 2 taps
+- [ ] Straight-to-navigation works on Google (Android + iOS) and Apple (iOS)
+- [ ] Cross-provider fallback works (Apple link → Google Maps on Android)
 - [ ] Active route is visually distinct from the queue
 - [ ] Done/remove actions work and sync to all devices
 - [ ] Tested on iOS Safari + Android Chrome (real devices or emulators)
 
 ---
 
-## Phase 6 — Hardening, security & edge cases
+## Phase 6 — Collaboration polish
+
+Add the features that make 3 people in a car actually want to use this.
+
+**Scope**
+- **Voting:** one-tap 👍 per route; queue sorts by votes; each person votes once per route
+  (guard via `localStorage`).
+- **Multistop itinerary:** build a single multi-waypoint route from an ordered selection
+  (Google `waypoints=|`, Apple repeated `waypoint=`) so the driver launches the whole plan
+  at once.
+- **Presence:** show who's joined (name + role), with a lightweight "last seen" heartbeat.
+- **Notifications (optional):** a subtle sound/haptic + visual badge when a new route or
+  vote arrives, disabled by default or easily muted.
+
+**Definition of done**
+- [ ] Voting works and reorders the driver's queue
+- [ ] A multistop itinerary can be built and launched in one tap
+- [ ] Presence shows current members with roles
+- [ ] New-activity notification is non-intrusive and can be muted
+
+---
+
+## Phase 7 — Hardening, security & edge cases
 
 Make the "minimal security" model explicit and production-safe enough for real trips.
 
@@ -156,7 +226,7 @@ Make the "minimal security" model explicit and production-safe enough for real t
 
 ---
 
-## Phase 7 — Deploy & handoff
+## Phase 8 — Deploy & handoff
 
 Ship it and make it usable by non-technical trip members.
 
@@ -178,6 +248,8 @@ Ship it and make it usable by non-technical trip members.
 ## Execution notes for future sessions
 
 - **Small commits per phase.** Commit working code at each phase boundary.
+- **Update the handoff ledger** at the top of this file every time you finish (or get
+  blocked on) a phase. This is what lets the next conversation resume cleanly.
 - **Verify before declaring done.** Run the definition-of-done checklist, not just "it compiles."
 - **No secrets in git.** Firebase/web config goes in a template; real values live locally / in docs.
 - **Reversible by default.** Don't force-push or rewrite history without explicit approval.
