@@ -96,5 +96,58 @@ t('empty input is an error', () => {
   assert.ok(r.message, 'has a message');
 });
 
+console.log('Navigation normalization (Phase 5 — one-tap handoff):');
+t('short link opens verbatim (maps.app.goo.gl)', () => {
+  const url = 'https://maps.app.goo.gl/AbCdEfGh123';
+  assert.strictEqual(RouteLink.normalizeForNavigation(url), url);
+});
+t('short link opens verbatim (goo.gl/maps)', () => {
+  const url = 'https://goo.gl/maps/xYz123';
+  assert.strictEqual(RouteLink.normalizeForNavigation(url), url);
+});
+t('Google directions URL gains dir_action=navigate', () => {
+  assert.strictEqual(
+    RouteLink.normalizeForNavigation('https://www.google.com/maps/dir/?api=1&destination=Montreal'),
+    'https://www.google.com/maps/dir/?api=1&destination=Montreal&dir_action=navigate'
+  );
+});
+t('Google directions URL with dir_action is left unchanged', () => {
+  const url = 'https://www.google.com/maps/dir/?api=1&destination=Niagara+Falls&dir_action=navigate';
+  assert.strictEqual(RouteLink.normalizeForNavigation(url), url);
+});
+t('Google search URL is not mangled', () => {
+  const url = 'https://www.google.com/maps/search/?api=1&query=best+poutine+near+me';
+  assert.strictEqual(RouteLink.normalizeForNavigation(url), url);
+});
+t('Google waypoints pipe survives normalization', () => {
+  assert.strictEqual(
+    RouteLink.normalizeForNavigation('https://www.google.com/maps/dir/?api=1&destination=Montreal&waypoints=Kingston|Ottawa&travelmode=driving'),
+    'https://www.google.com/maps/dir/?api=1&destination=Montreal&waypoints=Kingston|Ottawa&travelmode=driving&dir_action=navigate'
+  );
+});
+t('Apple legacy URL gains start=3', () => {
+  assert.strictEqual(
+    RouteLink.normalizeForNavigation('https://maps.apple.com/?daddr=Niagara+Falls,+ON'),
+    'https://maps.apple.com/?daddr=Niagara+Falls,+ON&start=3'
+  );
+});
+t('Apple unified URL gains start=3', () => {
+  assert.strictEqual(
+    RouteLink.normalizeForNavigation('https://maps.apple.com/directions?destination=Montreal&mode=driving'),
+    'https://maps.apple.com/directions?destination=Montreal&mode=driving&start=3'
+  );
+});
+t('Apple URL with start already set is left unchanged', () => {
+  const url = 'https://maps.apple.com/directions?destination=Montreal&start=1&mode=driving';
+  assert.strictEqual(RouteLink.normalizeForNavigation(url), url);
+});
+t('unknown host is left unchanged', () => {
+  const url = 'https://example.com/x';
+  assert.strictEqual(RouteLink.normalizeForNavigation(url), url);
+});
+t('non-https is left unchanged (no mangling)', () => {
+  assert.strictEqual(RouteLink.normalizeForNavigation('javascript:alert(1)'), 'javascript:alert(1)');
+});
+
 console.log('\n' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

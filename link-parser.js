@@ -185,6 +185,73 @@
     };
   }
 
+  /* ------------------------------------------------------------------ *
+   * One-tap navigation normalization (Phase 5)
+   * ------------------------------------------------------------------ */
+
+  // Escape a literal string for use inside a RegExp (detect an already-present
+  // query param without a full URL re-serialize).
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // Append a single query param to an absolute URL *without* re-serializing the
+  // rest of the string. This keeps the link verbatim (waypoint pipes, encoded
+  // commas, etc.) and only adds our flag. Idempotent: if the param already
+  // exists anywhere in the query, the original string is returned untouched.
+  function appendQueryParam(urlString, key, value) {
+    var s = String(urlString);
+    if (!s) return s;
+
+    var hash = '';
+    var hashIdx = s.indexOf('#');
+    if (hashIdx !== -1) {
+      hash = s.slice(hashIdx);
+      s = s.slice(0, hashIdx);
+    }
+
+    var qIdx = s.indexOf('?');
+    var query = qIdx === -1 ? '' : s.slice(qIdx + 1);
+    if (new RegExp('(^|&)' + escapeRegExp(key) + '(=|&|$)').test(query)) {
+      return urlString; // already has the param — leave as-is
+    }
+
+    var sep = qIdx === -1 ? '?' : (query ? '&' : '');
+    return s + sep + encodeURIComponent(key) + '=' + encodeURIComponent(value) + hash;
+  }
+
+  // Turn a stored route URL into the URL to open for one-tap navigation.
+  // - Short links (maps.app.goo.gl / goo.gl) open verbatim — they resolve on
+  //   the target device, never here.
+  // - Non-short Google directions URLs get `dir_action=navigate` (jumps past
+  //   the route preview into turn-by-turn). Search/place links are untouched.
+  // - Non-short Apple Maps links get `start=3` (auto-begins navigation).
+  // - Anything else (unknown host, non-https, unparseable) is returned as-is;
+  //   the caller decides whether it is safe to open.
+  function normalizeForNavigation(urlString) {
+    var s = String(urlString == null ? '' : urlString).trim();
+    if (!s) return s;
+
+    var u;
+    try {
+      u = new URL(s);
+    } catch (e) {
+      return s;
+    }
+
+    if (u.protocol !== 'https:') return s;
+    if (isShortLink(u.hostname)) return s; // never mangle short links
+
+    var provider = hostProvider(u.hostname);
+    if (provider === 'google' && u.pathname.indexOf('/maps/dir/') === 0) {
+      return appendQueryParam(s, 'dir_action', 'navigate');
+    }
+    if (provider === 'apple') {
+      return appendQueryParam(s, 'start', '3');
+    }
+    return s;
+  }
+
   var RouteLink = {
     DEFAULT_PROVIDER: DEFAULT_PROVIDER,
     parse: parse,
@@ -192,6 +259,7 @@
     buildGoogleUrl: buildGoogleUrl,
     buildAppleUrl: buildAppleUrl,
     hostProvider: hostProvider,
+    normalizeForNavigation: normalizeForNavigation,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
