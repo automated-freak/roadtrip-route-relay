@@ -141,7 +141,8 @@ No custom URL schemes or API keys are required. Full reference details are in
 - Access = knowing the trip code (unguessable); the API is unauthenticated (open CORS),
   so the trip code is the only gate.
 - Input is validated on render (labels render as text, XSS-safe); link validation is Phase 4.
-- Rooms are not auto-expired yet (deferred to Phase 7); fine for a one-week trip.
+- Rooms auto-expire server-side (Phase 7): routes idle longer than `STALE_HOURS` (default
+  7 days) are swept on startup and hourly — no client-driven expiry.
 - See `SECURITY.md` for the full model and its explicit tradeoffs.
 
 ---

@@ -212,14 +212,33 @@ Parser behaviour notes (Phase 4):
 
 ---
 
-## Open questions / known limits
+## Open questions / known limits (Phase 7 status)
 
-- **iOS 18.4+ unified Maps URL:** newer schema may supersede some `daddr` forms; store
-  pasted links verbatim, and only *generate* the unified form for typed destinations.
-- **Short-link resolution:** `maps.app.goo.gl` links resolve on the *target* device; store
-  as-is and never resolve server-side.
-- **Room cleanup:** deferred to Phase 7. With the self-hosted SQLite backend this is a
-  simple server-side sweep (delete rows with `updated_at` older than a cutoff, run on a
-  timer or at startup) — no Cloud Function needed.
+The following were open as of Phases 4-5. Phase 7 resolved the code concerns and
+documented the rest as accepted limits.
+
+### Handled (implemented)
+
+- **iOS 18.4+ unified Maps URL** — pasted `maps.apple.com` links are stored verbatim (never
+  re-parsed), and typed destinations are *generated* in the unified
+  `/directions?destination=…` form (`link-parser.js` `buildAppleUrl`). `normalizeForNavigation`
+  adds `start=3` to both legacy and unified Apple URLs.
+- **Short-link resolution** — `maps.app.goo.gl` / `goo.gl/maps` are stored verbatim and
+  never resolved server-side (they resolve on the target device).
+- **Room cleanup** — implemented in Phase 7: `backend/server.js` sweeps routes idle longer
+  than `STALE_HOURS` (default 7 days) on startup and hourly. No client-driven expiry.
+- **No-network states** — `app.js` detects fetch failures and shows an "Offline —
+  reconnecting…" toast (plus a "Back online ✓" on recovery); the service worker (`sw.js`)
+  caches the app shell so the UI still loads without a connection.
+- **Duplicate submissions** — the "Add to trip" button is disabled while a submit is
+  in-flight, so accidental double-taps can't create two routes. Intentional duplicates are
+  allowed (two passengers may suggest the same place; the driver dedupes by eye) — an
+  accepted limit, not a bug.
+- **Empty-queue UX** — both passenger and driver views render an explicit empty state, and
+  "Start trip" guards with a "Queue is empty" toast when there's nothing to route.
+
+### Accepted limits (documented, not fixed)
+
 - **Straight-to-nav only works when the phone has a current location**; otherwise the link
-  falls back to a route preview (both Google and Apple document this). Acceptable.
+  falls back to a route preview (both Google and Apple document this). Acceptable — the
+  handoff still lands on the right destination, just not auto-starting navigation.
