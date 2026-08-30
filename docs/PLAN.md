@@ -32,7 +32,7 @@ new session.
 |---|-------|--------|-------------|-----------------|--------------------------|
 | 0 | Foundation & tooling | ✅ Done | 2026-08-29 | Repo + docs + placeholder `index.html` created; Pages enabled | Start Phase 1 |
 | 1 | Product spec & UX wireframes | ✅ Done | 2026-08-30 | Wrote `docs/PRODUCT_SPEC.md` (roles, 3 screens, flows, acceptance criteria incl. one-tap nav) + SVG wireframes for all 3 screens in `docs/wireframes/`; spec reviewed against ARCHITECTURE (no changes needed) | **Build Phase 2:** static mobile-first HTML/CSS/JS shell with a local mock store — render all 3 screens from `PRODUCT_SPEC.md` §3 + wireframes, large (≥44pt) touch targets, dark-mode, safe-area handling, and a PWA manifest + icons for Add-to-Home-Screen. Open items to settle while building: default provider for typed destinations, whole-card tap vs Navigate button, nickname fallback (see `PRODUCT_SPEC.md` §7) |
-| 2 | Frontend shell | ✅ Done | 2026-08-30 | Static mobile-first shell built (vanilla HTML/CSS/JS, no build step): all 3 screens driven by an in-memory mock store, ≥44pt touch targets, forced-dark driver theme + safe-area handling, PWA manifest + icons + service worker. Lighthouse mobile 100/100/100 (perf/accessibility/best-practices). | **Build Phase 3:** replace the in-memory `store.routes` mock in `app.js` with a Firebase Realtime Database trip-room subscription keyed by `tripCode`; render updates live, handle initial-empty + reconnect, keep Firebase config out of git via a `docs/SETUP.md` template. Reuse the existing render functions — the route shape already matches ARCHITECTURE's data model. |
+| 2 | Frontend shell | ✅ Done | 2026-08-30 | Static mobile-first shell built (vanilla HTML/CSS/JS, no build step): all 3 screens driven by an in-memory mock store, ≥44pt touch targets, forced-dark driver theme + safe-area handling, PWA manifest + icons + service worker. Lighthouse mobile 100/100/100 (perf/accessibility/best-practices). | **Build Phase 3:** replace the in-memory `store.routes` mock in `app.js` with a shared backend — a self-hosted SQLite API (`backend/server.js`, Node `node:http` + `node:sqlite`) keyed by `tripCode`; poll for updates (~1.2s), handle initial-empty + reconnect, keep the SQLite DB out of git via `docs/SETUP.md`. Reuse the existing render functions — the route shape already matches ARCHITECTURE's data model. |
 | 3 | Backend integration (realtime) | ✅ Done | 2026-08-30 | **Pivoted from Firebase to self-hosted SQLite** (no Google account needed). Built `backend/server.js` (Node `node:http` + `node:sqlite`, zero deps): REST API keyed by `trip_code` (list/create/patch/delete/activate/reorder), open CORS, DB at `backend/data/` (gitignored). `app.js` now polls every ~1.2s instead of the mock store; reconnect + empty-state handled. All endpoints exercised via curl (create/list/activate-demote/reorder/patch/delete/validation/CORS preflight). Config via `config.js` `apiBase`. On-device E2E deferred to Phase 8. | **Build Phase 4:** replace `guessProvider()` in `app.js` with a real link parser — classify Google vs Apple vs unknown, generate a canonical deep link for typed destinations, validate hosts (reject `javascript:`/`data:`), and add the good/bad test-link corpus from `RESEARCH.md`. Note: `url` is currently stored verbatim from a pasted link or empty for typed text; Phase 4 fills the canonical link. |
 | 4 | Route submission & parsing | ⬜ Not started | — | — | — |
 | 5 | Driver queue & one-tap handoff | ⬜ Not started | — | — | — |
@@ -209,9 +209,13 @@ Round out the in-car experience now that the core handoff works.
 Make the "minimal security" model explicit and production-safe enough for real trips.
 
 **Scope**
-- Replace open dev rules with a shared-access model: a random, unguessable trip code and
-  optional short PIN (see `docs/SECURITY.md`).
-- Rate-limit / clean up stale rooms (trips auto-expire after N hours of inactivity).
+- Tighten access beyond the open, unauthenticated API if desired: the unguessable trip
+  code is already the gate; add an optional short PIN if the owner wants a second layer
+  (see `docs/SECURITY.md`).
+- Rate-limit / clean up stale trips (auto-expire after N hours of inactivity). With the
+  self-hosted SQLite backend this is a simple server-side sweep — `DELETE … WHERE
+  updated_at < cutoff` on a timer or at startup — no Cloud Function or client-driven
+  expiry needed.
 - Handle edge cases: iOS 18.4+ unified Maps URLs, no-network states, duplicate
   submissions, empty-queue UX.
 - PWA polish: offline shell, updated icons, splash screen.
@@ -229,7 +233,8 @@ Make the "minimal security" model explicit and production-safe enough for real t
 Ship it and make it usable by non-technical trip members.
 
 **Scope**
-- Deploy to GitHub Pages (main branch) and verify the live URL.
+- Deploy the frontend to GitHub Pages (main branch) and verify the live URL; confirm the
+  SQLite backend + HTTPS tunnel are running on the droplet (see `docs/SETUP.md`).
 - Test the full flow end-to-end on a real road-trip scenario.
 - Write a short user guide (`docs/USER_GUIDE.md`): how to create a trip, share the code,
   submit a route, and drive with it.

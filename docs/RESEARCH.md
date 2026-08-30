@@ -10,9 +10,9 @@ Findings that informed the plan, with sources. Current as of 2026-08-30.
   (e.g. `main` root or `/docs`).
 - Pages requires the repository to be **public** for free hosting; private repos need a
   paid plan. We chose a public repo (the app itself is code-only; the trip *data* lives
-  in Firebase, not the repo).
-- Pages is static-only: **no server-side code or secrets** can run. This forces the
-  shared-state problem onto a BaaS (see §2).
+  in a SQLite file on the droplet, not the repo).
+- Pages is static-only: **no server-side code or secrets** can run. This pushes the
+  shared-state problem to the droplet's self-hosted SQLite API (see §2).
 
 ## 2. Realtime shared state (decision: self-hosted SQLite)
 
@@ -205,8 +205,8 @@ Bad (should be rejected with a clear message):
   pasted links verbatim, and only *generate* the unified form for typed destinations.
 - **Short-link resolution:** `maps.app.goo.gl` links resolve on the *target* device; store
   as-is and never resolve server-side.
-- **Room cleanup:** Firebase free tier has no server for cron; expiry will be client-driven
-  (a client that sees an expired room clears it) or via a scheduled Cloud Function if
-  needed later.
+- **Room cleanup:** deferred to Phase 7. With the self-hosted SQLite backend this is a
+  simple server-side sweep (delete rows with `updated_at` older than a cutoff, run on a
+  timer or at startup) — no Cloud Function needed.
 - **Straight-to-nav only works when the phone has a current location**; otherwise the link
   falls back to a route preview (both Google and Apple document this). Acceptable.
