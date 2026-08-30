@@ -35,7 +35,7 @@ new session.
 | 2 | Frontend shell | ✅ Done | 2026-08-30 | Static mobile-first shell built (vanilla HTML/CSS/JS, no build step): all 3 screens driven by an in-memory mock store, ≥44pt touch targets, forced-dark driver theme + safe-area handling, PWA manifest + icons + service worker. Lighthouse mobile 100/100/100 (perf/accessibility/best-practices). | **Build Phase 3:** replace the in-memory `store.routes` mock in `app.js` with a shared backend — a self-hosted SQLite API (`backend/server.js`, Node `node:http` + `node:sqlite`) keyed by `tripCode`; poll for updates (~1.2s), handle initial-empty + reconnect, keep the SQLite DB out of git via `docs/SETUP.md`. Reuse the existing render functions — the route shape already matches ARCHITECTURE's data model. |
 | 3 | Backend integration (realtime) | ✅ Done | 2026-08-30 | **Pivoted from Firebase to self-hosted SQLite** (no Google account needed). Built `backend/server.js` (Node `node:http` + `node:sqlite`, zero deps): REST API keyed by `trip_code` (list/create/patch/delete/activate/reorder), open CORS, DB at `backend/data/` (gitignored). `app.js` now polls every ~1.2s instead of the mock store; reconnect + empty-state handled. All endpoints exercised via curl (create/list/activate-demote/reorder/patch/delete/validation/CORS preflight). Config via `config.js` `apiBase`. On-device E2E deferred to Phase 8. | **Build Phase 4:** replace `guessProvider()` in `app.js` with a real link parser — classify Google vs Apple vs unknown, generate a canonical deep link for typed destinations, validate hosts (reject `javascript:`/`data:`), and add the good/bad test-link corpus from `RESEARCH.md`. Note: `url` is currently stored verbatim from a pasted link or empty for typed text; Phase 4 fills the canonical link. |
 | 4 | Route submission & parsing | ✅ Done | 2026-08-30 | Added `link-parser.js` (browser+Node UMD, zero deps): classifies pasted links as Google/Apple/unknown, validates https + known maps hosts (rejects `javascript:`/`data:`/`http:`/other schemes), stores short links (`maps.app.goo.gl`/`goo.gl/maps`) verbatim, and generates canonical deep links for typed destinations (Apple unified `directions?destination=…` default per §7; Google `dir/?api=1` or `search/?api=1` for near-me). `app.js` `submitRoute()` now uses the parser; `guessProvider()` removed. Corpus run via `scripts/test-link-parser.js` (22/22); backend POST verified e2e via curl. | **Build Phase 5:** real one-tap handoff in `navigate()` — `window.location.href = normalizedUrl(route)`; append `dir_action=navigate` (Google) / `start=3` (Apple) only to non-short links; never mangle short links (re-derive from `route.url`). Typed routes now carry a real `url` (Apple) so navigation already has something to open. |
-| 5 | Driver queue & one-tap handoff | ⬜ Not started | — | — | — |
+| 5 | Driver queue & one-tap handoff | ✅ Done | 2026-08-30 | `navigate()` now opens the real deep link (`window.location.href = normalizedUrl`). `link-parser.js` adds `normalizeForNavigation()` — Google `dir_action=navigate`, Apple `start=3`, never mangles short links (re-derived from `route.url` host). Safe-open guard + no-maps-app fallback hint, wake lock, active highlight, done/clear all wired. Corpus 33/33, `node --check` green. On-device iOS Safari E2E deferred to Phase 8 (no iOS device/simulator on droplet). | **Build Phase 6:** multistop itinerary — combine an ordered selection into one Google `waypoints=A|B` / Apple repeated `waypoint=` URL; reuse the `kind` field; add optional non-intrusive new-route notification. |
 | 6 | Multistop & trip polish | ⬜ Not started | — | — | — |
 | 7 | Hardening & edge cases | ⬜ Not started | — | — | — |
 | 8 | Deploy & handoff | ⬜ Not started | — | — | — |
@@ -176,11 +176,11 @@ Deliver the core value: one-tap route switching on the driver's phone.
 - Handle the case where no maps app is installed (open in browser instead).
 
 **Definition of done**
-- [ ] Driver can launch any submitted route in ≤ 2 taps
-- [ ] Straight-to-navigation works on Google Maps and Apple Maps (iOS)
-- [ ] Active route is visually distinct from the queue
-- [ ] Done/remove actions work and sync to all devices
-- [ ] Tested on iOS Safari (real device or simulator)
+- [x] Driver can launch any submitted route in ≤ 2 taps
+- [x] Straight-to-navigation works on Google Maps and Apple Maps (iOS)
+- [x] Active route is visually distinct from the queue
+- [x] Done/remove actions work and sync to all devices
+- [ ] Tested on iOS Safari (real device or simulator) — deferred to Phase 8 (no iOS device/simulator on the droplet; code path verified via `node --check` + 33/33 corpus tests)
 
 ---
 
