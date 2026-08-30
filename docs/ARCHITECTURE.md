@@ -8,14 +8,14 @@ Technical approach and the decisions behind it.
 
 ```
 Passenger phones                Driver phone                Car display
-(anyone in the car)             (the nav device)            (CarPlay / Android Auto)
+(anyone in the car)             (the nav device)            (CarPlay)
       │                              │                            ▲
       │  type/paste destination      │  tap a route →              │
       │  (Google/Apple link)         │  native maps app launches   │
       ▼                              ▼                            │
 ┌───────────────────────────────────────────────────┐            │
 │  Route Relay (static web app)                     │────────────┘
-│  - passenger view: type/paste, vote, queue        │
+│  - passenger view: type/paste, queue              │
 │  - driver view: live queue, one-tap launch        │
 └───────────────┬───────────────────────────────────┘
                 │ realtime subscribe/write
@@ -26,7 +26,7 @@ Passenger phones                Driver phone                Car display
 
 Key insight: **Route Relay never draws its own map.** It is a control surface. It stores
 and presents map links, then hands them off to the native maps app on the driver's phone,
-which is already mirrored to the car. This keeps the app tiny, free, and cross-platform.
+which is already mirrored to the car. This keeps the app tiny and free.
 
 ---
 
@@ -47,16 +47,15 @@ which is already mirrored to the car. This keeps the app tiny, free, and cross-p
 The app has **two roles**, but they are *not* fixed accounts — they're flags on a person's
 presence in the trip:
 
-- **Driver** — the person whose phone is mirrored to the car (CarPlay / Android Auto).
+- **Driver** — the person whose phone is mirrored to the car (CarPlay).
   Their device runs the driver view: large one-tap queue.
-- **Passenger** — everyone else. Their devices run the passenger view: type/paste, vote,
-  see the queue.
+- **Passenger** — everyone else. Their devices run the passenger view: type/paste, see the queue.
 
 Rules:
 - Roles are **per-device and self-selected** at join time ("I'm driving" / "I'm riding").
   One driver per trip is the norm, but we don't enforce it (3 trusted people).
-- The **driver's platform** (`ios` / `android`) is what determines which maps app a tap
-  launches, so it drives cross-provider conversion (see "Deep-link handoff").
+- Everyone on the trip uses an iPhone, so both **Google Maps and Apple Maps are available
+  on every device**. A tap opens whichever app the link belongs to — no conversion needed.
 - Anyone (including the driver) can submit a route; passengers are the primary submitters.
 
 ---
@@ -73,7 +72,6 @@ Rules:
       /<memberId>        # e.g. "sam-8f3a"
         name: "Sam"
         role: "driver" | "passenger"
-        platform: "ios" | "android"
         lastSeen: <ISO>
     routes:
       /<routeId>
@@ -82,7 +80,6 @@ Rules:
         provider: "google" | "apple" | "other"
         kind: "destination" | "waypoint"       # new destination vs stop along the way
         status: "pending" | "active" | "done" | "removed"
-        votes: 2                               # simple count (client guards one vote/person)
         author: "Sam"                          # nickname of the submitter
         createdAt: <ISO>
         updatedAt: <ISO>
@@ -93,8 +90,6 @@ Notes:
   in the share URL, e.g. `…/#/trip/X7K2Q`. The hash keeps the code out of server logs.
 - `kind` separates "this is our new destination" (`destination`) from "this is a stop
   along the way" (`waypoint`). It's how we later build a multi-stop itinerary.
-- `votes` is a plain counter for v1 — a client records that it has voted in `localStorage`
-  to prevent double-voting. (A per-member map is over-engineering at 3-person scale.)
 - Realtime listeners mean any client update is pushed to all connected clients instantly.
 
 ---
@@ -122,7 +117,7 @@ open-source/Postgres.
 The driver taps a route → the app opens a URL. Because these are **universal links / app
 links**, the OS routes them to the installed maps app, which is mirrored to the car.
 
-The handoff has three steps, applied at tap time on the **driver's** device:
+The handoff has two steps, applied at tap time on the **driver's** device:
 
 1. **Normalize for one-tap navigation.** If we can safely do so, append the
    straight-to-navigation flag:
@@ -130,12 +125,9 @@ The handoff has three steps, applied at tap time on the **driver's** device:
    - Apple: add `start=3` (or leave as-is) → auto-begins navigation after a short delay.
    - We only add these when the link already points at a destination; we never mangle a
      short link.
-2. **Cross-provider fallback.** If the route's provider can't open on the driver's device
-   (e.g. an Apple link on Android), convert to the driver's maps app when the destination
-   is extractable (see `RESEARCH.md` §6 conversion table). Short links can't be converted,
-   so they open as-is.
-3. **Open.** `window.location.href = url` (or an anchor tap). If no maps app is installed,
-   the OS falls back to the browser — we detect this and show a hint.
+2. **Open.** `window.location.href = url` (or an anchor tap). Because everyone is on an
+   iPhone, the OS opens whichever maps app the link belongs to. If no maps app is
+   installed, the OS falls back to the browser — we detect this and show a hint.
 
 No custom URL schemes or API keys are required. Full reference details are in
 `RESEARCH.md`.

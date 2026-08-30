@@ -115,28 +115,27 @@ Key points:
   generate the unified form ourselves (`destination=<place>&mode=driving`).
 
 Platform note:
-- `maps.apple.com` opens Apple Maps on iOS. On Android there is **no Apple Maps app**, so
-  the link falls back to the browser. We should detect this and offer a **Google Maps
-  equivalent** instead (see §6 cross-provider conversion).
+- Everyone on this trip uses an iPhone, so `maps.apple.com` always opens Apple Maps.
+  Google Maps links open the Google Maps app, which is also installed on iOS. No
+  cross-provider conversion is needed.
 
 ## 5. Why "tap a link → native app" works with no code
 
-On modern iOS and Android, `https` links to `maps.apple.com` / `www.google.com/maps` are
-**universal links / app links**. When the driver taps one, the OS opens the installed maps
-app directly. This is what lets the driver's phone hand off to CarPlay / Android Auto with
-zero custom URL-scheme handling.
+On iOS, `https` links to `maps.apple.com` / `www.google.com/maps` are **universal links**.
+When the driver taps one, iOS opens the installed maps app directly. This is what lets the
+driver's phone hand off to CarPlay with zero custom URL-scheme handling.
 
-The CarPlay / Android Auto constraint that motivates the whole app: **only one phone is
-mirrored to the car display at a time.** Everyone else is a passenger. Route Relay is the
-control surface that lets passengers queue suggestions and the driver apply them with one
-tap on the *mirrored* phone.
+The CarPlay constraint that motivates the whole app: **only one phone is mirrored to the
+car display at a time.** Everyone else is a passenger. Route Relay is the control surface
+that lets passengers queue suggestions and the driver apply them with one tap on the
+*mirrored* phone.
 
 ---
 
 ## 6. Feature research — what actually helps 3 people in a car
 
 Research + reasoning on which features earn their place, prioritized for our scale
-(3 trusted people, same car, security not a concern).
+(3 trusted people, same car, all on iPhones, security not a concern).
 
 ### Must-have (v1 — the core loop)
 
@@ -145,14 +144,12 @@ Research + reasoning on which features earn their place, prioritized for our sca
 | **Type a destination** (not just paste a link) | Passengers usually say "let's hit a Tim Hortons", not paste a URL | App builds `maps.apple.com/directions?destination=…` or `google.com/maps/dir/?api=1&destination=…` from free text |
 | **Paste a link** | For pre-researched spots / shared links | classify Google vs Apple vs unknown |
 | **One-tap → straight to navigation** | "Switching is one tap" is the whole point | append `dir_action=navigate` (Google) / `start=N` (Apple) |
-| **Cross-provider fallback** | Driver's phone dictates the app (Android has no Apple Maps; some iOS users prefer Google Maps) | convert Apple ↔ Google when we can extract the destination |
 | **Big touch targets + dark mode** | Driver is glove-friendly, night driving | mobile-first CSS, high contrast |
 
-### Should-have (v1.5 — the "collaboration" value)
+### Should-have (v1.5 — trip polish)
 
 | Feature | Why | How |
 |---------|-----|-----|
-| **Vote / endorse a suggestion** | 3 people can quickly agree on the next stop | one-tap 👍 per route; sort queue by votes |
 | **Multistop itinerary** | "gas → food → hotel" as one ordered trip | build a single multi-waypoint URL (Google `waypoints` / Apple `waypoint`) |
 | **Destination vs. waypoint** | distinguish "our new destination" from "a stop along the way" | `kind` field on each route |
 | **Active-route highlight** | everyone sees what the driver is currently navigating | `status: active` |
@@ -163,25 +160,17 @@ Research + reasoning on which features earn their place, prioritized for our sca
 
 | Feature | Notes |
 |---------|-------|
-| Presence ("who's online") | 3 people in one car — mildly useful, low priority |
 | Subtle "new suggestion" sound | driver might miss it otherwise; keep optional/silent-by-default |
 | Route preview thumbnails | needs map APIs/keys — skip for v1 |
 | Trip history / saved routes | out of scope for a temporary trip tool |
 | Offline cache of past trips | RTDB already caches offline; extra value is low |
 
-### Cross-provider conversion table
+### No cross-provider conversion needed
 
-| Passenger submits | Driver on iOS (Apple Maps) | Driver on Android (Google Maps) |
-|-------------------|-----------------------------|---------------------------------|
-| Apple `?daddr=<place>` | open as-is | → `google.com/maps/dir/?api=1&destination=<place>&dir_action=navigate` |
-| Apple `/directions?destination=<place>` | open as-is | → `google.com/maps/dir/?api=1&destination=<place>&dir_action=navigate` |
-| Google `dir/?api=1&destination=<place>` | open as-is (Google Maps installed) | open as-is |
-| Google short link (`maps.app.goo.gl`) | open as-is | open as-is |
-
-**Known limit:** short links (`maps.app.goo.gl`, `goo.gl/maps`) hide the destination, so
-they **cannot be converted cross-provider** without resolving them server-side (which we
-don't do — they resolve on the target device). In that case we open them as-is and let the
-OS pick the app.
+Everyone on the trip uses an iPhone, and both Google Maps and Apple Maps are installed on
+iOS. A Google Maps link opens Google Maps; an Apple Maps link opens Apple Maps. No
+conversion is required — we still record `provider` per route so we can show a sensible
+label/icon.
 
 ---
 
@@ -216,12 +205,10 @@ Bad (should be rejected with a clear message):
 
 ## Open questions / known limits
 
-- **Apple Maps on Android:** no native app; falls back to web. Mitigation: detect the
-  driver's OS and convert to Google Maps when possible (§6).
 - **iOS 18.4+ unified Maps URL:** newer schema may supersede some `daddr` forms; store
   pasted links verbatim, and only *generate* the unified form for typed destinations.
 - **Short-link resolution:** `maps.app.goo.gl` links resolve on the *target* device; store
-  as-is, never resolve server-side, and never try cross-provider conversion on them.
+  as-is and never resolve server-side.
 - **Room cleanup:** Firebase free tier has no server for cron; expiry will be client-driven
   (a client that sees an expired room clears it) or via a scheduled Cloud Function if
   needed later.

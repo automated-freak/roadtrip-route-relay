@@ -36,7 +36,7 @@ new session.
 | 3 | Backend integration (realtime) | ⬜ Not started | — | — | — |
 | 4 | Route submission & parsing | ⬜ Not started | — | — | — |
 | 5 | Driver queue & one-tap handoff | ⬜ Not started | — | — | — |
-| 6 | Collaboration polish | ⬜ Not started | — | — | — |
+| 6 | Multistop & trip polish | ⬜ Not started | — | — | — |
 | 7 | Hardening & edge cases | ⬜ Not started | — | — | — |
 | 8 | Deploy & handoff | ⬜ Not started | — | — | — |
 
@@ -74,12 +74,12 @@ Turn the concept into concrete screens and interactions so the build doesn't dri
   1. **Landing / create-or-join trip** — generate or enter a trip code; choose "I'm driving"
      or "I'm riding"; pick nickname.
   2. **Passenger view** — big "Add a stop" button, **type-or-paste** field, optional label,
-     optional "stop along the way vs new destination" toggle, vote buttons, live list.
+     optional "stop along the way vs new destination" toggle, live list.
   3. **Driver view** — large, glove-friendly queue, one-tap launch, active-route highlight,
      "mark done / clear" actions, screen stays awake.
 - Sketch rough wireframes (text or simple SVG in `docs/wireframes/`).
-- Write the acceptance criteria for each screen, including cross-provider and one-tap-nav
-  behaviors from `docs/RESEARCH.md` §6.
+- Write the acceptance criteria for each screen, including the one-tap-navigation behavior
+  from `docs/RESEARCH.md` §6.
 
 **Definition of done**
 - [ ] `docs/wireframes/` contains a wireframe for each screen
@@ -161,13 +161,11 @@ Make it trivial for passengers to submit a destination — **typed or pasted**.
 Deliver the core value: one-tap route switching on the driver's phone.
 
 **Scope**
-- Driver view: live queue of routes, sorted by votes (then newest), manually reorderable.
+- Driver view: live queue of routes, newest-first, manually reorderable.
 - Tapping a route opens the deep link on the driver's phone (which launches the native
-  maps app → CarPlay / Android Auto). No in-app map, no searching.
+  maps app → CarPlay). No in-app map, no searching.
 - **One-tap navigation:** append `dir_action=navigate` (Google) / `start=N` (Apple) so the
   tap jumps straight into turn-by-turn when possible.
-- **Cross-provider fallback:** if the route's provider can't open on the driver's device,
-  convert it when the destination is extractable (see `docs/RESEARCH.md` §6).
 - Track an "active" route (the one currently navigating) and show it prominently.
 - Allow marking routes done / removing them (with a lightweight confirmation to avoid
   accidental clears).
@@ -176,33 +174,30 @@ Deliver the core value: one-tap route switching on the driver's phone.
 
 **Definition of done**
 - [ ] Driver can launch any submitted route in ≤ 2 taps
-- [ ] Straight-to-navigation works on Google (Android + iOS) and Apple (iOS)
-- [ ] Cross-provider fallback works (Apple link → Google Maps on Android)
+- [ ] Straight-to-navigation works on Google Maps and Apple Maps (iOS)
 - [ ] Active route is visually distinct from the queue
 - [ ] Done/remove actions work and sync to all devices
-- [ ] Tested on iOS Safari + Android Chrome (real devices or emulators)
+- [ ] Tested on iOS Safari (real device or simulator)
 
 ---
 
-## Phase 6 — Collaboration polish
+## Phase 6 — Multistop & trip polish
 
-Add the features that make 3 people in a car actually want to use this.
+Round out the in-car experience now that the core handoff works.
 
 **Scope**
-- **Voting:** one-tap 👍 per route; queue sorts by votes; each person votes once per route
-  (guard via `localStorage`).
 - **Multistop itinerary:** build a single multi-waypoint route from an ordered selection
   (Google `waypoints=|`, Apple repeated `waypoint=`) so the driver launches the whole plan
   at once.
-- **Presence:** show who's joined (name + role), with a lightweight "last seen" heartbeat.
-- **Notifications (optional):** a subtle sound/haptic + visual badge when a new route or
-  vote arrives, disabled by default or easily muted.
+- **Destination vs. waypoint ordering:** let passengers clearly mark each suggestion as the
+  new destination or a stop along the way, and reorder stops before building the itinerary.
+- **Notifications (optional):** a subtle sound/haptic + visual badge when a new route
+  arrives, disabled by default or easily muted.
 
 **Definition of done**
-- [ ] Voting works and reorders the driver's queue
-- [ ] A multistop itinerary can be built and launched in one tap
-- [ ] Presence shows current members with roles
-- [ ] New-activity notification is non-intrusive and can be muted
+- [ ] A multistop itinerary can be built, reordered, and launched in one tap
+- [ ] Destination-vs-waypoint distinction is clear and correctly builds the itinerary
+- [ ] New-route notification is non-intrusive and can be muted
 
 ---
 
@@ -214,8 +209,8 @@ Make the "minimal security" model explicit and production-safe enough for real t
 - Replace open dev rules with a shared-access model: a random, unguessable trip code and
   optional short PIN (see `docs/SECURITY.md`).
 - Rate-limit / clean up stale rooms (trips auto-expire after N hours of inactivity).
-- Handle edge cases: iOS 18.4+ unified Maps URLs, Apple Maps on Android (web fallback),
-  no-network states, duplicate submissions, empty-queue UX.
+- Handle edge cases: iOS 18.4+ unified Maps URLs, no-network states, duplicate
+  submissions, empty-queue UX.
 - PWA polish: offline shell, updated icons, splash screen.
 
 **Definition of done**
@@ -238,7 +233,7 @@ Ship it and make it usable by non-technical trip members.
 - Final pass on accessibility, performance, and mobile viewport.
 
 **Definition of done**
-- [ ] Live URL works on iOS Safari and Android Chrome
+- [ ] Live URL works on iOS Safari
 - [ ] `docs/USER_GUIDE.md` written
 - [ ] Full happy-path flow verified (create trip → submit → driver launches → done)
 - [ ] Open questions / known limits captured in README or a `docs/ROADMAP.md`

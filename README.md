@@ -11,7 +11,7 @@ notes so that future sessions can build the app phase by phase.
 ## The problem
 
 On a road trip, only **one** phone's GPS (Google Maps or Apple Maps) is mirrored to the
-car display via CarPlay / Android Auto. Everyone else in the car is a passenger who
+car display via CarPlay. Everyone else in the car is a passenger who
 sees a better route, a shortcut, or a stop worth making — but getting that route onto
 the driver's screen means:
 
@@ -34,16 +34,14 @@ Route Relay is a lightweight, mobile-friendly web app where:
   display.
 - **Switching navigation is one tap** — no searching, no hand-off of the phone.
 
-Collaboration features for a small group (≈3 people in the same car):
+Collaboration features for a small group (≈3 people in the same car, all on iPhones):
 
-- **Vote** on suggestions so the group's pick rises to the top.
+- **Type a destination or paste a link** — works with both Google Maps and Apple Maps.
 - **Build a multistop itinerary** (gas → food → hotel) and launch it as one route.
-- **Cross-provider handoff** — an Apple Maps link still works on an Android driver
-  (converted to Google Maps), and vice versa.
 
 ## Design goals
 
-- **Mobile-first** — works in Safari (iOS) and Chrome (Android).
+- **Mobile-first** — works in Safari on iPhone (iOS).
 - **Minimal security** — it's a temporary, invite-only tool for a handful of people on
   the same trip. No accounts. Access is gated by a shared, unguessable trip code / URL.
 - **Zero server maintenance** — static frontend on GitHub Pages plus a free realtime
@@ -80,8 +78,8 @@ roadtrip-route-relay/
 | Frontend | Static, mobile-first (vanilla HTML/CSS/JS to start; PWA-able) |
 | Shared state | Firebase Realtime Database (free Spark tier) |
 | Auth | None. Shared trip code / URL (see `docs/SECURITY.md`) |
-| Map providers | Google Maps + Apple Maps deep links (both handled, incl. cross-provider fallback) |
-| Collaboration | Votes, multistop itinerary, presence, one-tap navigation |
+| Map providers | Google Maps + Apple Maps deep links (both handled on iOS) |
+| Collaboration | Multistop itinerary, one-tap navigation |
 | Status | Documentation only — no code yet |
 
 ## Live site
