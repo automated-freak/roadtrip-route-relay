@@ -4,15 +4,16 @@
    SQLite REST API on the droplet (see backend/server.js). The client polls
    GET /api/trips/:code/routes every ~1.2s and mutates via POST/PATCH/DELETE.
 
-   Phase 4 adds real link classification/generation; Phase 5 adds the real
-   deep-link handoff (window.location.href = url).
+   Phase 4 adds real link classification/generation (see link-parser.js);
+   Phase 5 adds the real deep-link handoff (window.location.href = url).
 
-   Design decisions locked for this phase (see docs/PRODUCT_SPEC.md §7):
+   Design decisions locked (see docs/PRODUCT_SPEC.md §7):
    - Whole card is tappable on the driver view (1 tap) — the "▶ Navigate"
      button is a visible affordance that triggers the same action.
    - Empty nickname falls back to "You".
-   - Typed-destination default provider is NOT decided here (Phase 4); new
-     free-text routes are tagged provider="text" and shown as "Maps".
+   - Typed-destination default provider is Apple Maps (all-iPhone, CarPlay-first).
+     The Google URL is also generated and kept on the parse result for a future
+     provider toggle — see link-parser.js (RouteLink.DEFAULT_PROVIDER).
    ========================================================================== */
 
 (function () {
@@ -464,34 +465,27 @@
     }
   }
 
-  // Light classification — full parser arrives in Phase 4.
-  function guessProvider(input) {
-    const s = input.trim().toLowerCase();
-    if (/google|goo\.gl|maps\.app/.test(s)) return 'google';
-    if (/apple/.test(s)) return 'apple';
-    return 'text';
-  }
-
   async function submitRoute() {
     const input = $('#dest-input').value.trim();
-    const label = $('#label-input').value.trim();
+    const labelInput = $('#label-input').value.trim();
     const kind = ($('input[name="kind"]:checked') || {}).value || 'destination';
     const err = $('#panel-error');
 
-    if (!input) {
-      err.textContent = 'Enter a place or paste a Google/Apple Maps link first.';
+    const parsed = window.RouteLink.parse(input);
+
+    if (parsed.kind === 'error') {
+      err.textContent = parsed.message;
       err.hidden = false;
       return;
     }
 
     err.hidden = true;
 
-    const provider = guessProvider(input);
+    const label = labelInput || (parsed.labelHint || '');
     const payload = {
-      label: label || input.slice(0, 48),
-      // Phase 4 fills in a canonical deep link; store the pasted link for now.
-      url: provider === 'text' ? '' : input,
-      provider,
+      label,
+      url: parsed.url,
+      provider: parsed.provider,
       kind,
       author: store.nickname || 'You',
     };
