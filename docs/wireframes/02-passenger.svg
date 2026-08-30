@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="900" viewBox="0 0 400 900" font-family="system-ui, -apple-system, 'Helvetica Neue', sans-serif">
+  <!-- background -->
+  <rect width="400" height="900" fill="#eef0f4"/>
+
+  <!-- phone frame -->
+  <rect x="32" y="16" width="336" height="868" rx="42" fill="#ffffff" stroke="#c8ccd4" stroke-width="2"/>
+
+  <!-- status bar -->
+  <text x="60" y="48" font-size="13" fill="#333">9:41</text>
+  <rect x="300" y="38" width="46" height="14" rx="7" fill="#d8dbe0"/>
+  <line x1="32" y1="64" x2="368" y2="64" stroke="#e4e6ea" stroke-width="1"/>
+
+  <!-- header -->
+  <text x="52" y="100" font-size="20" font-weight="700" fill="#111">Route Relay</text>
+  <rect x="240" y="82" width="120" height="26" rx="13" fill="#eef4ff"/>
+  <text x="300" y="100" font-size="12" font-weight="600" fill="#0a84ff" text-anchor="middle">X7K2Q · Riding</text>
+
+  <!-- ADD A STOP button -->
+  <rect x="52" y="124" width="296" height="72" rx="16" fill="#0a84ff"/>
+  <text x="200" y="157" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">+ Add a stop</text>
+  <text x="200" y="178" font-size="12" fill="#dcebff" text-anchor="middle">type a place or paste a link</text>
+
+  <!-- input panel (expanded after tapping Add a stop) -->
+  <text x="52" y="234" font-size="11" font-weight="600" letter-spacing="1" fill="#999">NEW SUGGESTION</text>
+  <rect x="52" y="246" width="296" height="56" rx="12" fill="#f2f3f6" stroke="#d8dbe0"/>
+  <text x="70" y="280" font-size="15" fill="#aaa">Tim Hortons near me</text>
+  <rect x="52" y="312" width="296" height="50" rx="12" fill="#f2f3f6" stroke="#d8dbe0"/>
+  <text x="70" y="343" font-size="14" fill="#aaa">Label (optional)</text>
+
+  <!-- kind toggle -->
+  <rect x="52" y="376" width="146" height="52" rx="12" fill="#1b1f27"/>
+  <text x="125" y="408" font-size="14" font-weight="600" fill="#fff" text-anchor="middle">New destination</text>
+  <rect x="202" y="376" width="146" height="52" rx="12" fill="#f2f3f6" stroke="#d8dbe0"/>
+  <text x="275" y="408" font-size="14" font-weight="500" fill="#333" text-anchor="middle">Stop on the way</text>
+  <text x="52" y="450" font-size="11" fill="#b23">^ "stop on the way" sets kind=waypoint (builds multistop later)</text>
+
+  <rect x="52" y="462" width="296" height="50" rx="12" fill="#1b1f27"/>
+  <text x="200" y="494" font-size="16" font-weight="600" fill="#fff" text-anchor="middle">Add to trip</text>
+
+  <!-- live queue -->
+  <text x="52" y="548" font-size="11" font-weight="600" letter-spacing="1" fill="#999">LIVE QUEUE (NEWEST FIRST)</text>
+
+  <!-- route card: active -->
+  <rect x="52" y="562" width="296" height="78" rx="14" fill="#e8f3ff" stroke="#0a84ff" stroke-width="2"/>
+  <text x="70" y="590" font-size="15" font-weight="600" fill="#0a3f7a">Lake view lookout</text>
+  <text x="70" y="610" font-size="12" fill="#5a8bc0">destination · Apple Maps · by Sam</text>
+  <rect x="70" y="620" width="82" height="16" rx="8" fill="#0a84ff"/>
+  <text x="111" y="632" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">NOW NAVIGATING</text>
+
+  <!-- route card: pending -->
+  <rect x="52" y="652" width="296" height="66" rx="14" fill="#f7f8fa" stroke="#e4e6ea"/>
+  <text x="70" y="679" font-size="15" font-weight="600" fill="#222">Gas — Costco</text>
+  <text x="70" y="699" font-size="12" fill="#888">stop on the way · Google Maps · by Alex</text>
+
+  <!-- route card: pending -->
+  <rect x="52" y="730" width="296" height="66" rx="14" fill="#f7f8fa" stroke="#e4e6ea"/>
+  <text x="70" y="757" font-size="15" font-weight="600" fill="#222">Poutine spot</text>
+  <text x="70" y="777" font-size="12" fill="#888">destination · Google Maps · by Sam</text>
+
+  <!-- footnote -->
+  <text x="200" y="852" font-size="11" fill="#aaa" text-anchor="middle">Tap a card to see it; the driver applies it</text>
+</svg>

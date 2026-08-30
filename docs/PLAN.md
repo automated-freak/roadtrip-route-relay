@@ -31,7 +31,7 @@ new session.
 | # | Phase | Status | Last worked | Outcome / notes | Handoff to next session |
 |---|-------|--------|-------------|-----------------|--------------------------|
 | 0 | Foundation & tooling | ✅ Done | 2026-08-29 | Repo + docs + placeholder `index.html` created; Pages enabled | Start Phase 1 |
-| 1 | Product spec & UX wireframes | ⬜ Not started | — | — | — |
+| 1 | Product spec & UX wireframes | ✅ Done | 2026-08-30 | Wrote `docs/PRODUCT_SPEC.md` (roles, 3 screens, flows, acceptance criteria incl. one-tap nav) + SVG wireframes for all 3 screens in `docs/wireframes/`; spec reviewed against ARCHITECTURE (no changes needed) | **Build Phase 2:** static mobile-first HTML/CSS/JS shell with a local mock store — render all 3 screens from `PRODUCT_SPEC.md` §3 + wireframes, large (≥44pt) touch targets, dark-mode, safe-area handling, and a PWA manifest + icons for Add-to-Home-Screen. Open items to settle while building: default provider for typed destinations, whole-card tap vs Navigate button, nickname fallback (see `PRODUCT_SPEC.md` §7) |
 | 2 | Frontend shell | ⬜ Not started | — | — | — |
 | 3 | Backend integration (realtime) | ⬜ Not started | — | — | — |
 | 4 | Route submission & parsing | ⬜ Not started | — | — | — |

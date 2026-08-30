@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="900" viewBox="0 0 400 900" font-family="system-ui, -apple-system, 'Helvetica Neue', sans-serif">
+  <!-- background -->
+  <rect width="400" height="900" fill="#0f1115"/>
+
+  <!-- phone frame -->
+  <rect x="32" y="16" width="336" height="868" rx="42" fill="#171a20" stroke="#2a2e37" stroke-width="2"/>
+
+  <!-- status bar -->
+  <text x="60" y="48" font-size="13" fill="#8a8f98">9:41</text>
+  <rect x="300" y="38" width="46" height="14" rx="7" fill="#2a2e37"/>
+  <line x1="32" y1="64" x2="368" y2="64" stroke="#262a32" stroke-width="1"/>
+
+  <!-- header -->
+  <text x="52" y="100" font-size="20" font-weight="700" fill="#f5f6f8">Route Relay</text>
+  <rect x="240" y="82" width="120" height="26" rx="13" fill="#1e2b18"/>
+  <text x="300" y="100" font-size="12" font-weight="600" fill="#7ddb6a" text-anchor="middle">X7K2Q · Driving</text>
+
+  <!-- screen-awake indicator -->
+  <rect x="52" y="114" width="296" height="30" rx="10" fill="#1c1f26"/>
+  <text x="200" y="134" font-size="12" fill="#8a8f98" text-anchor="middle">👁 screen stays awake while this view is open</text>
+  <text x="200" y="158" font-size="11" fill="#b23" text-anchor="middle">^ Screen Wake Lock API (graceful fallback if unsupported)</text>
+
+  <!-- active route -->
+  <text x="52" y="202" font-size="11" font-weight="600" letter-spacing="1" fill="#6b7280">NOW NAVIGATING</text>
+  <rect x="52" y="216" width="296" height="112" rx="16" fill="#0a2a1c" stroke="#7ddb6a" stroke-width="2"/>
+  <text x="70" y="248" font-size="20" font-weight="700" fill="#e9ffe6">Lake view lookout</text>
+  <text x="70" y="270" font-size="13" fill="#9fd69a">destination · Apple Maps · by Sam</text>
+  <rect x="70" y="286" width="120" height="30" rx="10" fill="#0a84ff"/>
+  <text x="130" y="306" font-size="14" font-weight="600" fill="#fff" text-anchor="middle">↻ Re-navigate</text>
+  <rect x="200" y="286" width="76" height="30" rx="10" fill="#2a2e37"/>
+  <text x="238" y="306" font-size="13" font-weight="600" fill="#e5e7eb" text-anchor="middle">Mark done</text>
+
+  <!-- queue header -->
+  <text x="52" y="372" font-size="11" font-weight="600" letter-spacing="1" fill="#6b7280">UP NEXT</text>
+
+  <!-- queue card 1 -->
+  <rect x="52" y="386" width="296" height="108" rx="16" fill="#1e222b" stroke="#2a2e37"/>
+  <text x="70" y="416" font-size="19" font-weight="700" fill="#f5f6f8">Gas — Costco</text>
+  <text x="70" y="438" font-size="12" fill="#8a8f98">stop on the way · Google Maps · by Alex</text>
+  <rect x="70" y="454" width="252" height="34" rx="12" fill="#0a84ff"/>
+  <text x="196" y="477" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">▶ Navigate</text>
+
+  <!-- queue card 2 -->
+  <rect x="52" y="508" width="296" height="108" rx="16" fill="#1e222b" stroke="#2a2e37"/>
+  <text x="70" y="538" font-size="19" font-weight="700" fill="#f5f6f8">Poutine spot</text>
+  <text x="70" y="560" font-size="12" fill="#8a8f98">destination · Google Maps · by Sam</text>
+  <rect x="70" y="576" width="252" height="34" rx="12" fill="#0a84ff"/>
+  <text x="196" y="599" font-size="16" font-weight="700" fill="#fff" text-anchor="middle">▶ Navigate</text>
+
+  <!-- annotation: one-tap behavior -->
+  <text x="200" y="654" font-size="11" fill="#b23" text-anchor="middle">^ ONE TAP → opens Maps app → straight into turn-by-turn</text>
+  <text x="200" y="674" font-size="11" fill="#b23" text-anchor="middle">   (Google: dir_action=navigate · Apple: start=N) → CarPlay</text>
+
+  <!-- reorder / secondary actions -->
+  <text x="52" y="716" font-size="11" font-weight="600" letter-spacing="1" fill="#6b7280">QUEUE ACTIONS</text>
+  <rect x="52" y="728" width="142" height="44" rx="12" fill="#2a2e37"/>
+  <text x="123" y="755" font-size="13" font-weight="600" fill="#e5e7eb" text-anchor="middle">⇅ Reorder</text>
+  <rect x="206" y="728" width="142" height="44" rx="12" fill="#3a241f"/>
+  <text x="277" y="755" font-size="13" font-weight="600" fill="#ff9d9d" text-anchor="middle">Clear queue</text>
+  <text x="200" y="798" font-size="11" fill="#8a8f98" text-anchor="middle">Clear asks for a light confirm to avoid accidental wipe</text>
+</svg>
