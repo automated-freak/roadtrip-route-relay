@@ -197,6 +197,19 @@ Bad (should be rejected with a clear message):
 - `javascript:alert(1)`
 - `data:text/html,hello`
 
+Parser behaviour notes (Phase 4):
+- `link-parser.js` is the single implementation; `scripts/test-link-parser.js` runs this
+  corpus (22 assertions) and must stay green when the parser changes.
+- A string with an explicit scheme (`javascript:`, `data:`, `http:`, …) or a bare-hostname
+  shape is treated as a *link* and validated against the known-hosts allowlist. `https`
+  only — `http` is rejected with a prompt to use https.
+- "not a url at all" and other plain text are treated as *typed destinations* in the
+  submit flow (they generate a link), so they're only "bad" in the link-classifier sense
+  (`classifyLink()` returns `null`). Empty input is the one case the submit flow rejects
+  outright.
+- Short links (`maps.app.goo.gl`, `goo.gl/maps`) are stored verbatim; the parser never
+  resolves them (they resolve on the target device).
+
 ---
 
 ## Open questions / known limits

@@ -237,9 +237,11 @@ classification/generation (Phase 4), one-tap normalization (Phase 5), multistop
 
 ## 7. Open questions / decisions to confirm
 
-1. **Default provider for typed destinations** — when a passenger types free text, do we
-   generate Google or Apple by default? Proposed: **Apple Maps** (native on every iPhone,
-   CarPlay-first) with a visible fallback to Google. Owner to confirm in Phase 4.
+1. **Default provider for typed destinations** — ✅ **Decided (Phase 4): Apple Maps** by
+   default (native on every iPhone, CarPlay-first). The Google URL is generated too and
+   kept on the parse result (`RouteLink.DEFAULT_PROVIDER` in `link-parser.js`), so a
+   provider toggle is a one-line change. A visible per-submission Google fallback is not
+   built yet (deferred).
 2. **Single-tap vs two-tap on driver cards** — tapping the whole card (1 tap) vs a
    dedicated "▶ Navigate" button (2 taps). Proposed: **whole card is tappable** (1 tap),
    with "Mark done" as a separate, smaller target. Worth a quick usability check in Phase 2.

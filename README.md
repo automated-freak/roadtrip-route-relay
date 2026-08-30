@@ -2,10 +2,11 @@
 
 Shared turn-by-turn route handoff for road trips.
 
-**Status: Phase 3 complete — shared realtime backend.** The three screens
-(landing / passenger / driver) are built as a mobile-first static site, now backed by a
-self-hosted SQLite API (a tiny Node server, zero npm deps) so routes sync across phones.
-Link parsing (Phase 4) and one-tap navigation (Phase 5) arrive next.
+**Status: Phase 4 complete — route submission & parsing.** The three screens
+(landing / passenger / driver) are a mobile-first static site backed by a self-hosted
+SQLite API (a tiny Node server, zero npm deps) so routes sync across phones. Passengers
+can now type a destination or paste a Google/Apple Maps link; it's classified, validated,
+and turned into a canonical deep link. One-tap navigation (Phase 5) arrives next.
 
 ---
 
@@ -59,11 +60,13 @@ roadtrip-route-relay/
 ├── index.html                ← static app shell (all 3 screens)
 ├── styles.css                ← mobile-first, dark-mode + safe-area styles
 ├── app.js                    ← view logic + API client (polls the backend)
+├── link-parser.js            ← link classifier + deep-link generator (Phase 4)
 ├── config.js                 ← runtime config (API base URL — set before deploy)
 ├── manifest.webmanifest      ← PWA manifest
 ├── sw.js                     ← service worker (offline shell)
 ├── icons/                    ← app icons (192/512/maskable/apple-touch)
 ├── scripts/gen-icons.py      ← regenerates the icons
+├── scripts/test-link-parser.js ← runs the Phase 4 test-link corpus
 ├── backend/
 │   ├── server.js             ← SQLite REST API (Node, zero npm deps)
 │   └── README.md             ← how to run + expose it
@@ -92,7 +95,7 @@ roadtrip-route-relay/
 | Auth | None. Shared trip code / URL (see `docs/SECURITY.md`) |
 | Map providers | Google Maps + Apple Maps deep links (both handled on iOS) |
 | Collaboration | Multistop itinerary, one-tap navigation |
-| Status | Phase 3 complete — shared SQLite backend wired up |
+| Status | Phase 4 complete — link parsing + typed destinations wired up |
 
 ## Live site
 
