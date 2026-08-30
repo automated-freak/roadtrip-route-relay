@@ -37,7 +37,7 @@ new session.
 | 4 | Route submission & parsing | ✅ Done | 2026-08-30 | Added `link-parser.js` (browser+Node UMD, zero deps): classifies pasted links as Google/Apple/unknown, validates https + known maps hosts (rejects `javascript:`/`data:`/`http:`/other schemes), stores short links (`maps.app.goo.gl`/`goo.gl/maps`) verbatim, and generates canonical deep links for typed destinations (Apple unified `directions?destination=…` default per §7; Google `dir/?api=1` or `search/?api=1` for near-me). `app.js` `submitRoute()` now uses the parser; `guessProvider()` removed. Corpus run via `scripts/test-link-parser.js` (22/22); backend POST verified e2e via curl. | **Build Phase 5:** real one-tap handoff in `navigate()` — `window.location.href = normalizedUrl(route)`; append `dir_action=navigate` (Google) / `start=3` (Apple) only to non-short links; never mangle short links (re-derive from `route.url`). Typed routes now carry a real `url` (Apple) so navigation already has something to open. |
 | 5 | Driver queue & one-tap handoff | ✅ Done | 2026-08-30 | `navigate()` now opens the real deep link (`window.location.href = normalizedUrl`). `link-parser.js` adds `normalizeForNavigation()` — Google `dir_action=navigate`, Apple `start=3`, never mangles short links (re-derived from `route.url` host). Safe-open guard + no-maps-app fallback hint, wake lock, active highlight, done/clear all wired. Corpus 33/33, `node --check` green. On-device iOS Safari E2E deferred to Phase 8 (no iOS device/simulator on droplet). | **Build Phase 6:** multistop itinerary — combine an ordered selection into one Google `waypoints=A|B` / Apple repeated `waypoint=` URL; reuse the `kind` field; add optional non-intrusive new-route notification. |
 | 6 | Multistop & trip polish | ✅ Done | 2026-08-30 | Added `link-parser.js` `placeToken()` (extract the destination/query token from a maps URL; `''` for short links/unknown hosts) and `buildItinerary(provider, tokens)` — Google `waypoints=A\|B\|C` (pipe-separated) / Apple repeated `waypoint=`; last token = destination, preceding = waypoints. Driver view gains a **Start trip** button that builds + launches one combined itinerary from all pending stops in their reorderable order (reuses `moveRoute`/`sort_order` + the one-tap `normalizeForNavigation` handoff; Apple default per §7) and a **destination-vs-waypoint chip** on each card (the `kind` field). Optional **new-route notification** (badge + toast + soft chime + haptic), muted by default, toggle in both headers, persisted to `localStorage`. Corpus 47/47; `node --check` green. | **Build Phase 7:** hardening — stale-trip sweep, optional PIN, iOS 18.4 unified-URL edge cases, offline shell + PWA polish. |
-| 7 | Hardening & edge cases | ⬜ Not started | — | — | — |
+| 7 | Hardening & edge cases | ✅ Done | 2026-08-30 | Stale-trip sweep in `backend/server.js` (`STALE_HOURS` default 168h, run at startup + hourly, no client-driven expiry; `scripts/test-sweep.js` 5/5). Optional PIN **deliberately skipped** and documented in `docs/SECURITY.md`. Edge cases handled/documented in `RESEARCH.md`: iOS 18.4+ unified URL (verbatim paste + generated unified form), short links (verbatim), room cleanup (sweep), no-network (toast + SW shell), duplicate submits (in-flight button disable), empty-queue UX. PWA polish: offline shell fixed (`link-parser.js` precached, `config.js` network-only), iOS splash screens + regenerated icons. No secrets committed. | **Build Phase 8:** deploy to GitHub Pages, run backend + Cloudflare tunnel on the droplet, do on-device iOS E2E (the deferred Phase 5 item), write `docs/USER_GUIDE.md`, capture known limits in README/ROADMAP. |
 | 8 | Deploy & handoff | ⬜ Not started | — | — | — |
 
 Legend: ✅ Done · 🔄 In progress · ⬜ Not started · ⚠️ Blocked
@@ -221,10 +221,10 @@ Make the "minimal security" model explicit and production-safe enough for real t
 - PWA polish: offline shell, updated icons, splash screen.
 
 **Definition of done**
-- [ ] Security model in `docs/SECURITY.md` is implemented and matches the code
-- [ ] Stale trips are cleaned up automatically
-- [ ] Edge cases from `docs/RESEARCH.md` are handled or explicitly documented as known limits
-- [ ] No secrets committed
+- [x] Security model in `docs/SECURITY.md` is implemented and matches the code
+- [x] Stale trips are cleaned up automatically
+- [x] Edge cases from `docs/RESEARCH.md` are handled or explicitly documented as known limits
+- [x] No secrets committed
 
 ---
 

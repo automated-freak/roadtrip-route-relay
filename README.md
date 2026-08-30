@@ -2,11 +2,10 @@
 
 Shared turn-by-turn route handoff for road trips.
 
-**Status: Phase 4 complete — route submission & parsing.** The three screens
-(landing / passenger / driver) are a mobile-first static site backed by a self-hosted
-SQLite API (a tiny Node server, zero npm deps) so routes sync across phones. Passengers
-can now type a destination or paste a Google/Apple Maps link; it's classified, validated,
-and turned into a canonical deep link. One-tap navigation (Phase 5) arrives next.
+**Status: Phase 7 complete — hardening, security & edge cases.** The full loop is
+built: passengers type/paste stops (Google/Apple deep links), the driver gets a live
+queue with one-tap navigation and a combined multistop itinerary, and the backend
+self-cleans stale trips. Remaining: deploy + on-device iOS E2E (Phase 8).
 
 ---
 
@@ -95,7 +94,7 @@ roadtrip-route-relay/
 | Auth | None. Shared trip code / URL (see `docs/SECURITY.md`) |
 | Map providers | Google Maps + Apple Maps deep links (both handled on iOS) |
 | Collaboration | Multistop itinerary, one-tap navigation |
-| Status | Phase 4 complete — link parsing + typed destinations wired up |
+| Status | Phase 7 complete — hardening, security & edge cases |
 
 ## Live site
 
