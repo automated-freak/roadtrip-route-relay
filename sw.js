@@ -1,15 +1,16 @@
 /* Route Relay — minimal service worker (offline shell + installability).
-   Cache-first for the app shell; network-first fallback for everything else.
-   Bump CACHE_VERSION when the shell assets change. */
+   Cache-first for the app shell; network-only for config.js (its apiBase
+   points at the tunnel URL, which changes when the tunnel restarts, so it must
+   never be served from a stale cache). Bump CACHE_VERSION when shell assets change. */
 
-const CACHE_VERSION = 'rr-v1';
+const CACHE_VERSION = 'rr-v2';
 const CACHE_NAME = `route-relay-${CACHE_VERSION}`;
 
 const SHELL = [
-  './',
   './index.html',
   './styles.css',
   './app.js',
+  './link-parser.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -39,8 +40,14 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
-  // Only handle same-origin requests; let cross-origin (e.g. future API) pass through.
+  // Only handle same-origin requests; let cross-origin (e.g. the API) pass through.
   if (url.origin !== self.location.origin) return;
+
+  // config.js must always hit the network — never serve a stale tunnel URL.
+  if (url.pathname.endsWith('/config.js')) {
+    event.respondWith(fetch(req));
+    return;
+  }
 
   // For navigation requests, serve the cached shell (offline SPA).
   if (req.mode === 'navigate') {
