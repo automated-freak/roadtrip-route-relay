@@ -42,6 +42,9 @@
 
   function api(path, opts) {
     opts = opts || {};
+    // The route list is a live, shared store — never let the browser or any
+    // intermediary serve a stale response. Always hit the backend.
+    opts.cache = 'no-store';
     opts.headers = Object.assign({}, opts.headers, { 'Content-Type': 'application/json' });
     return fetch(API_BASE + path, opts).then((res) => {
       if (!res.ok) {
@@ -308,7 +311,11 @@
 
   // Re-acquire the lock if the driver re-tabs to the page while driving.
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && currentView === 'driver') requestWakeLock();
+    if (document.hidden) return;
+    if (currentView === 'driver') requestWakeLock();
+    // iOS throttles setInterval while a tab is backgrounded; re-sync the queue
+    // the moment the phone is foregrounded again so updates never look stuck.
+    if (store.tripCode) fetchRoutes();
   });
 
   /* ------------------------------------------------------------------ *

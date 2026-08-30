@@ -3,7 +3,7 @@
    points at the tunnel URL, which changes when the tunnel restarts, so it must
    never be served from a stale cache). Bump CACHE_VERSION when shell assets change. */
 
-const CACHE_VERSION = 'rr-v2';
+const CACHE_VERSION = 'rr-v3';
 const CACHE_NAME = `route-relay-${CACHE_VERSION}`;
 
 const SHELL = [

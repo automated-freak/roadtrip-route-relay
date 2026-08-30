@@ -6,5 +6,5 @@
    URL from `cloudflared tunnel --url http://127.0.0.1:8787`). Leave empty for
    same-origin (only if the backend serves this app itself). */
 window.RR_CONFIG = {
-  apiBase: 'https://big-lamb-units-talked.trycloudflare.com',
+  apiBase: 'https://lets-smoking-films-seasonal.trycloudflare.com',
 };
