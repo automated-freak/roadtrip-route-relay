@@ -511,12 +511,34 @@
     }
   }
 
-  // Stub for the one-tap handoff. Phase 5 replaces this with a real deep-link
-  // open: window.location.href = normalizedUrl(route).
+  // Defense-in-depth for the open API: only hand a known https maps link to the
+  // browser. The submit flow already validates links (Phase 4), but the route URL
+  // could have been written directly. Never let a non-https / non-maps URL through.
+  function isSafeMapUrl(url) {
+    try {
+      const u = new URL(url);
+      return u.protocol === 'https:' && !!window.RouteLink.hostProvider(u.hostname);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // One-tap handoff: mark the route active, then open its deep link so the OS
+  // routes the universal link to the installed maps app (→ CarPlay).
   async function navigate(id) {
     const route = store.routes.find((r) => r.id === id);
     if (!route) return;
 
+    // Nothing to open → helpful hint instead of a crash/no-op.
+    if (!route.url) {
+      toast('This route has no link — ask the passenger to re-add it.');
+      return;
+    }
+
+    // Mark active first (demotes the previous active route) and wait for the
+    // server to acknowledge it before leaving the page, so the state is durable
+    // and syncs to every device. Awaiting avoids the request being aborted by the
+    // navigation below.
     try {
       await api(routesPath() + '/' + encodeURIComponent(id) + '/activate', { method: 'POST' });
     } catch (e) {
@@ -525,13 +547,21 @@
     }
     await fetchRoutes();
 
-    if (route.url) {
-      toast(`▶ Opening ${providerLabel(route.provider)} — ${route.label || 'stop'}`);
-      // Real implementation (Phase 5):
-      // window.location.href = route.url;
-      console.info('[relay] would navigate to:', route.url);
-    } else {
-      toast(`▶ Navigate to “${route.label || 'stop'}” (link set in Phase 4)`);
+    const url = window.RouteLink.normalizeForNavigation(route.url);
+    if (!isSafeMapUrl(url)) {
+      toast('This route’s link can’t be opened safely on this device.');
+      return;
+    }
+
+    // Hint up-front: if no maps app is installed, iOS falls back to opening the
+    // link in the browser. JS can't detect that after the fact (the page is gone
+    // either way), so we say so before navigating.
+    toast(`▶ Opening ${providerLabel(route.provider)} — if it opens in your browser, a maps app isn’t installed.`, 4200);
+
+    try {
+      window.location.href = url;
+    } catch (e) {
+      toast('Couldn’t open that link on this device.');
     }
   }
 
